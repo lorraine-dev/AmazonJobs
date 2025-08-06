@@ -128,7 +128,6 @@ dmypy.json
 notebooks/
 tests/
 examples/
-scripts/
 deployment/
 
 # Data files (keep local only)
