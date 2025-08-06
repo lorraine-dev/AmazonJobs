@@ -6,6 +6,11 @@ on:
     - cron: '0 8,13,18 * * *'
   workflow_dispatch:  # Allow manual trigger
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
   scrape-and-deploy:
     runs-on: ubuntu-latest
@@ -42,4 +47,5 @@ jobs:
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./docs
-        publish_branch: gh-pages 
+        publish_branch: gh-pages
+        force_orphan: true 
