@@ -1,0 +1,664 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amazon Jobs Dashboard</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: #232f3e;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .stat {
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #232f3e;
+        }
+        .stat-label {
+            font-size: 14px;
+            color: #6c757d;
+        }
+        .table-container {
+            overflow-x: auto;
+            padding: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+        tr:hover {
+            background-color: #f8f9fa;
+        }
+        .active {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .inactive {
+            color: #dc3545;
+        }
+        .footer {
+            padding: 20px;
+            text-align: center;
+            color: #6c757d;
+            font-size: 12px;
+            border-top: 1px solid #dee2e6;
+        }
+        .job-title {
+            font-weight: 600;
+            color: #232f3e;
+        }
+        .job-url {
+            color: #007bff;
+            text-decoration: none;
+        }
+        .job-url:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Amazon Jobs Dashboard</h1>
+            <p>Personal job monitoring dashboard</p>
+        </div>
+        
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-number">52</div>
+                <div class="stat-label">Total Jobs</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">46</div>
+                <div class="stat-label">Active Jobs</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">6</div>
+                <div class="stat-label">Inactive Jobs</div>
+            </div>
+        </div>
+        
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Role</th>
+                        <th>Team</th>
+                        <th>Category</th>
+                        <th>Posted</th>
+                        <th>Status</th>
+                        <th>Link</th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                    <tr>
+                        <td class="job-title">Sr. Product Manager Tech, Customer Trust, Customer Trust</td>
+                        <td>Sr. Product Manager Tech</td>
+                        <td>Customer Trust</td>
+                        <td>Project/Program/Product Management--Technical</td>
+                        <td>2025-05-20</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/2987850/sr-product-manager-tech-customer-trust-customer-trust" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Applied Scientist, Supply Chain Optimization</td>
+                        <td>Applied Scientist</td>
+                        <td>Supply Chain Optimization</td>
+                        <td>Machine Learning Science</td>
+                        <td>2025-05-15</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/2983553/applied-scientist-supply-chain-optimization" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Software Engineer, External Fulfillment</td>
+                        <td>Software Engineer</td>
+                        <td>External Fulfillment</td>
+                        <td>Software Development</td>
+                        <td>2025-06-11</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/3006553/software-engineer-external-fulfillment" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Senior Business Intelligence Engineer , Long-term planning</td>
+                        <td>Senior Business Intelligence Engineer</td>
+                        <td>Long-term planning</td>
+                        <td>Business Intelligence</td>
+                        <td>2025-07-21</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/3038977/senior-business-intelligence-engineer-long-term-planning" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Applied Scientist, EU STEP Science and Tech</td>
+                        <td>Applied Scientist</td>
+                        <td>EU STEP Science and Tech</td>
+                        <td>Machine Learning Science</td>
+                        <td>2025-03-05</td>
+                        <td class="inactive">Inactive</td>
+                        <td><a href="https://amazon.jobs/en/jobs/2919632/applied-scientist-eu-step-science-and-tech" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Applied Scientist, ATS Machine Learning & Engineering (ML&E)</td>
+                        <td>Applied Scientist</td>
+                        <td>ATS Machine Learning & Engineering (ML&E)</td>
+                        <td>Machine Learning Science</td>
+                        <td>2025-06-10</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/3004686/applied-scientist-ats-machine-learning-engineering-ml-e" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">2025 Applied Scientist Internship, Amazon University Talent Acquisition</td>
+                        <td>2025 Applied Scientist Internship</td>
+                        <td>Amazon University Talent Acquisition</td>
+                        <td>Machine Learning Science</td>
+                        <td>2024-10-08</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/2798990/2025-applied-scientist-internship-amazon-university-talent-acquisition" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Software Dev Engineer, External Fulfillment</td>
+                        <td>Software Dev Engineer</td>
+                        <td>External Fulfillment</td>
+                        <td>Software Development</td>
+                        <td>2025-07-24</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/3042487/software-dev-engineer-external-fulfillment" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Senior Product Manager Tech, Network S&OP, EU SCOT, Supply Chain EU SCOT</td>
+                        <td>Senior Product Manager Tech</td>
+                        <td>Network S&OP</td>
+                        <td>Project/Program/Product Management--Technical</td>
+                        <td>2025-06-02</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/2997689/senior-product-manager-tech-network-s-op-eu-scot-supply-chain-eu-scot" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Senior Applied Scientist, EU ATS Science and Tech - Optimization</td>
+                        <td>Senior Applied Scientist</td>
+                        <td>EU ATS Science and Tech - Optimization</td>
+                        <td>Data Science</td>
+                        <td>2025-05-05</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/2973044/senior-applied-scientist-eu-ats-science-and-tech-optimization" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Business Intelligence Engineer II, EU Fulfillment Optimization</td>
+                        <td>Business Intelligence Engineer II</td>
+                        <td>EU Fulfillment Optimization</td>
+                        <td>Business Intelligence</td>
+                        <td>2025-07-23</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/3041617/business-intelligence-engineer-ii-eu-fulfillment-optimization" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Software Development Engineer II, Amazon Fulfillment Technologies - External Fulfillment</td>
+                        <td>Software Development Engineer II</td>
+                        <td>Amazon Fulfillment Technologies - External Fulfillment</td>
+                        <td>Software Development</td>
+                        <td>2025-07-28</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/3044260/software-development-engineer-ii-amazon-fulfillment-technologies-external-fulfillment" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Senior Business Intelligence Engineer, EU Ops Sustainability & Packaging</td>
+                        <td>Senior Business Intelligence Engineer</td>
+                        <td>EU Ops Sustainability & Packaging</td>
+                        <td>Business Intelligence</td>
+                        <td>2025-04-02</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/2943871/senior-business-intelligence-engineer-eu-ops-sustainability-packaging" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Applied Scientist, EU INTech</td>
+                        <td>Applied Scientist</td>
+                        <td>EU INTech</td>
+                        <td>Data Science</td>
+                        <td>2025-06-26</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/3019485/applied-scientist-eu-intech" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Software Development Engineer II, Amazon Fulfillment Technologies - External Fulfillment</td>
+                        <td>Software Development Engineer II</td>
+                        <td>Amazon Fulfillment Technologies - External Fulfillment</td>
+                        <td>Software Development</td>
+                        <td>2025-04-08</td>
+                        <td class="inactive">Inactive</td>
+                        <td><a href="https://amazon.jobs/en/jobs/2948753/software-development-engineer-ii-amazon-fulfillment-technologies-external-fulfillment" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Sr. Ops Engineer, MSP-CX DR, Mechatronics & Sustainable Packaging Customer Experience</td>
+                        <td>Sr. Ops Engineer</td>
+                        <td>MSP-CX DR</td>
+                        <td>Operations, IT, & Support Engineering</td>
+                        <td>2025-04-25</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/2966070/sr-ops-engineer-msp-cx-dr-mechatronics-sustainable-packaging-customer-experience" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Business Intelligence Engineer II, PRISM - Process Refinement, Integration & Strategic Modeling</td>
+                        <td>Business Intelligence Engineer II</td>
+                        <td>PRISM - Process Refinement</td>
+                        <td>Business Intelligence</td>
+                        <td>2025-07-16</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/3035214/business-intelligence-engineer-ii-prism-process-refinement-integration-strategic-modeling" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Business Intelligence Engineer - 12 month FTC, Fleet planning & Capacity</td>
+                        <td>Business Intelligence Engineer - 12 month FTC</td>
+                        <td>Fleet planning & Capacity</td>
+                        <td>Business Intelligence</td>
+                        <td>2025-06-06</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/3002424/business-intelligence-engineer-12-month-ftc-fleet-planning-capacity" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Sr. Business Intelligence Engineer, EU SC Placement Analytics</td>
+                        <td>Sr. Business Intelligence Engineer</td>
+                        <td>EU SC Placement Analytics</td>
+                        <td>Business Intelligence</td>
+                        <td>2025-06-03</td>
+                        <td class="inactive">Inactive</td>
+                        <td><a href="https://amazon.jobs/en/jobs/2998289/sr-business-intelligence-engineer-eu-sc-placement-analytics" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Business Intelligence Engineer, GFP Analytics</td>
+                        <td>Business Intelligence Engineer</td>
+                        <td>GFP Analytics</td>
+                        <td>Business Intelligence</td>
+                        <td>2025-05-06</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/2974686/business-intelligence-engineer-gfp-analytics" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Software Development Manager, Transportation Network Configuration</td>
+                        <td>Software Development Manager</td>
+                        <td>Transportation Network Configuration</td>
+                        <td>Software Development</td>
+                        <td>2025-07-21</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/3038987/software-development-manager-transportation-network-configuration" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Programmer Analyst</td>
+                        <td>Programmer Analyst</td>
+                        <td>nan</td>
+                        <td>Software Development</td>
+                        <td>2025-04-29</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/2968240/programmer-analyst" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Software Development Engineer II, Amazon Fulfillment Technologies - External Fulfillment</td>
+                        <td>Software Development Engineer II</td>
+                        <td>Amazon Fulfillment Technologies - External Fulfillment</td>
+                        <td>Software Development</td>
+                        <td>2025-06-03</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/2999200/software-development-engineer-ii-amazon-fulfillment-technologies-external-fulfillment" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Sr. Business Intelligence Engineer, Long Term Planning</td>
+                        <td>Sr. Business Intelligence Engineer</td>
+                        <td>Long Term Planning</td>
+                        <td>Business Intelligence</td>
+                        <td>2025-06-11</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/3006060/sr-business-intelligence-engineer-long-term-planning" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Software Development Engineer II, Amazon Fulfillment Technologies - External Fulfillment</td>
+                        <td>Software Development Engineer II</td>
+                        <td>Amazon Fulfillment Technologies - External Fulfillment</td>
+                        <td>Software Development</td>
+                        <td>2025-02-26</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/2912166/software-development-engineer-ii-amazon-fulfillment-technologies-external-fulfillment" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Programmer Analyst</td>
+                        <td>Programmer Analyst</td>
+                        <td>nan</td>
+                        <td>Software Development</td>
+                        <td>2025-07-18</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/3038124/programmer-analyst" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Sr Innovation and Design Eng, World Wide Fulfillment Design and Engineering</td>
+                        <td>Sr Innovation and Design Eng</td>
+                        <td>World Wide Fulfillment Design and Engineering</td>
+                        <td>Operations, IT, & Support Engineering</td>
+                        <td>2025-04-07</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/2910635/sr-innovation-and-design-eng-world-wide-fulfillment-design-and-engineering" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Sr Business Intelligence Engineer, EU Sustainable Packaging</td>
+                        <td>Sr Business Intelligence Engineer</td>
+                        <td>EU Sustainable Packaging</td>
+                        <td>Business Intelligence</td>
+                        <td>2025-07-08</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/3027592/sr-business-intelligence-engineer-eu-sustainable-packaging" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Business Intelligence Engineer, EU Direct Fulfillment Operations</td>
+                        <td>Business Intelligence Engineer</td>
+                        <td>EU Direct Fulfillment Operations</td>
+                        <td>Business Intelligence</td>
+                        <td>2025-07-09</td>
+                        <td class="inactive">Inactive</td>
+                        <td><a href="https://amazon.jobs/en/jobs/3029383/business-intelligence-engineer-eu-direct-fulfillment-operations" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Programmer Analyst</td>
+                        <td>Programmer Analyst</td>
+                        <td>nan</td>
+                        <td>Software Development</td>
+                        <td>2025-06-27</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/3020381/programmer-analyst" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Software Dev Engineer, External Fulfillment</td>
+                        <td>Software Dev Engineer</td>
+                        <td>External Fulfillment</td>
+                        <td>Software Development</td>
+                        <td>2025-07-24</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/3042442/software-dev-engineer-external-fulfillment" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Sr. Product Manager - Technical, EU INTech</td>
+                        <td>Sr. Product Manager - Technical</td>
+                        <td>EU INTech</td>
+                        <td>Project/Program/Product Management--Technical</td>
+                        <td>2024-10-16</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/2807305/sr-product-manager-technical-eu-intech" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Senior BI Engineer, Strategic Account Services</td>
+                        <td>Senior BI Engineer</td>
+                        <td>Strategic Account Services</td>
+                        <td>Business Intelligence</td>
+                        <td>2025-06-13</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/3008496/senior-bi-engineer-strategic-account-services" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Product Manager, Localization</td>
+                        <td>Product Manager</td>
+                        <td>Localization</td>
+                        <td>Project/Program/Product Management--Technical</td>
+                        <td>2025-07-02</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/3023692/product-manager-localization" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Sr. Analytics Specialist SA,EU North, AGS-EMEA-Europe North-WWSO</td>
+                        <td>Sr. Analytics Specialist SA</td>
+                        <td>EU North</td>
+                        <td>Solutions Architect</td>
+                        <td>2025-07-18</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/3038122/sr-analytics-specialist-sa-eu-north-ags-emea-europe-north-wwso" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Software Dev Engineer, External Fulfillment</td>
+                        <td>Software Dev Engineer</td>
+                        <td>External Fulfillment</td>
+                        <td>Software Development</td>
+                        <td>2025-07-24</td>
+                        <td class="inactive">Inactive</td>
+                        <td><a href="https://amazon.jobs/en/jobs/3042476/software-dev-engineer-external-fulfillment" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Sr. Business Intelligence Engineer, Long Term Planning</td>
+                        <td>Sr. Business Intelligence Engineer</td>
+                        <td>Long Term Planning</td>
+                        <td>Business Intelligence</td>
+                        <td>2025-07-21</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/3039092/sr-business-intelligence-engineer-long-term-planning" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Business Intelligence Engineer II, EU Supply Chain Placement Analytics & Engineering</td>
+                        <td>Business Intelligence Engineer II</td>
+                        <td>EU Supply Chain Placement Analytics & Engineering</td>
+                        <td>Business Intelligence</td>
+                        <td>2025-07-10</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/3030395/business-intelligence-engineer-ii-eu-supply-chain-placement-analytics-engineering" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Business Intelligence Engineer II, Data and Analytics</td>
+                        <td>Business Intelligence Engineer II</td>
+                        <td>Data and Analytics</td>
+                        <td>Business Intelligence</td>
+                        <td>2025-07-28</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/3044401/business-intelligence-engineer-ii-data-and-analytics" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Sr TPM - Global Transformation, Ops Tech Solutions (OTS)</td>
+                        <td>Sr TPM - Global Transformation</td>
+                        <td>Ops Tech Solutions (OTS)</td>
+                        <td>Operations, IT, & Support Engineering</td>
+                        <td>2025-03-20</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/2933862/sr-tpm-global-transformation-ops-tech-solutions-ots" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">DE-AT 3rd Party Network Manager, Hub Pickup and Return Points (PARP)</td>
+                        <td>DE-AT 3rd Party Network Manager</td>
+                        <td>Hub Pickup and Return Points (PARP)</td>
+                        <td>Project/Program/Product Management--Technical</td>
+                        <td>2025-06-12</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/3007190/de-at-3rd-party-network-manager-hub-pickup-and-return-points-parp" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Senior Software Engineer, S&OP Automation</td>
+                        <td>Senior Software Engineer</td>
+                        <td>S&OP Automation</td>
+                        <td>Software Development</td>
+                        <td>2025-07-09</td>
+                        <td class="inactive">Inactive</td>
+                        <td><a href="https://amazon.jobs/en/jobs/3029574/senior-software-engineer-s-op-automation" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Sr BIE position 3P Selection, EU 3P Selection</td>
+                        <td>Sr BIE position 3P Selection</td>
+                        <td>EU 3P Selection</td>
+                        <td>Business Intelligence</td>
+                        <td>2025-07-18</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/3038134/sr-bie-position-3p-selection-eu-3p-selection" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Sr. Applied Scientist, Supply Chain Optimization</td>
+                        <td>Sr. Applied Scientist</td>
+                        <td>Supply Chain Optimization</td>
+                        <td>Machine Learning Science</td>
+                        <td>2025-05-15</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/2983520/sr-applied-scientist-supply-chain-optimization" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Automation & Tech Sr. PM-T, Strategic Account Services (SAS)</td>
+                        <td>Automation & Tech Sr. PM-T</td>
+                        <td>Strategic Account Services (SAS)</td>
+                        <td>Project/Program/Product Management--Technical</td>
+                        <td>2025-05-16</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/2984398/automation-tech-sr-pm-t-strategic-account-services-sas" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Applied Scientist, EU INTech</td>
+                        <td>Applied Scientist</td>
+                        <td>EU INTech</td>
+                        <td>Data Science</td>
+                        <td>2024-09-30</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/2790938/applied-scientist-eu-intech" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Senior BIE, Pan-EU Programs</td>
+                        <td>Senior BIE</td>
+                        <td>Pan-EU Programs</td>
+                        <td>Business Intelligence</td>
+                        <td>2025-05-23</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/2990949/senior-bie-pan-eu-programs" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Amazon Postdoctoral Scientist, The Decision Science & Technology (DST)</td>
+                        <td>Amazon Postdoctoral Scientist</td>
+                        <td>The Decision Science & Technology (DST)</td>
+                        <td>Research Science</td>
+                        <td>2025-01-20</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/2877542/amazon-postdoctoral-scientist-the-decision-science-technology-dst" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Postdoctoral Scientist, EU Science and Technology</td>
+                        <td>Postdoctoral Scientist</td>
+                        <td>EU Science and Technology</td>
+                        <td>Machine Learning Science</td>
+                        <td>2025-06-25</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/3017920/postdoctoral-scientist-eu-science-and-technology" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Software Development Engineer II, Amazon Fulfillment Technologies - External Fulfillment</td>
+                        <td>Software Development Engineer II</td>
+                        <td>Amazon Fulfillment Technologies - External Fulfillment</td>
+                        <td>nan</td>
+                        <td>2025-04-08</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/2948751/software-development-engineer-ii-amazon-fulfillment-technologies-external-fulfillment" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Software Engineer, AFT External Fulfillment</td>
+                        <td>Software Engineer</td>
+                        <td>AFT External Fulfillment</td>
+                        <td>nan</td>
+                        <td>2025-07-01</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/3022540/software-engineer-aft-external-fulfillment" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                    <tr>
+                        <td class="job-title">Senior Business Intelligence Engineer, EU Defects</td>
+                        <td>Senior Business Intelligence Engineer</td>
+                        <td>EU Defects</td>
+                        <td>nan</td>
+                        <td>2025-08-01</td>
+                        <td class="active">Active</td>
+                        <td><a href="https://amazon.jobs/en/jobs/3049864/senior-business-intelligence-engineer-eu-defects" target="_blank" class="job-url">View Job</a></td>
+                    </tr>
+
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="footer">
+            <p>Last updated: 2025-08-06 17:36:26</p>
+            <p>Data source: Amazon Jobs Luxembourg</p>
+        </div>
+    </div>
+</body>
+</html>

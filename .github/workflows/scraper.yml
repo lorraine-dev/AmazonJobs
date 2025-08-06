@@ -1,0 +1,45 @@
+name: Amazon Jobs Scraper
+
+on:
+  schedule:
+    # Run at 8am, 1pm, and 6pm UTC (adjust for your timezone)
+    - cron: '0 8,13,18 * * *'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  scrape-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install Chrome
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y google-chrome-stable
+        
+    - name: Install dependencies
+      run: |
+        pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Run scraper
+      run: |
+        python src/scripts/run_scraper.py
+        
+    - name: Generate dashboard
+      run: |
+        python src/utils/data_processor.py
+        
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./docs
+        publish_branch: gh-pages 
