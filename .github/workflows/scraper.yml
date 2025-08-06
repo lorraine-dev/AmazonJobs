@@ -41,6 +41,12 @@ jobs:
         path: data/raw/
       continue-on-error: true
         
+    - name: Debug downloaded files
+      run: |
+        echo "=== Checking downloaded files ==="
+        ls -la data/raw/ || echo "data/raw/ directory not found"
+        find . -name "*.csv" -type f || echo "No CSV files found"
+        
     - name: Run scraper
       run: |
         python src/scripts/run_scraper.py
