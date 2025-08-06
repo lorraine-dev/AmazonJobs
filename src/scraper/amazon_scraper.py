@@ -222,30 +222,24 @@ class AmazonJobsScraper:
         }
         
         try:
-            # Random delay to avoid rate limiting
+            # Add random delay before each request (1-3 seconds)
             time.sleep(random.uniform(1, 3))
+            
+            # Navigate to job detail page
             driver.get(job_url)
-            
-            # Wait for page to load and JavaScript to execute
-            time.sleep(3)
-            
-            # Wait for job content to load
-            wait = WebDriverWait(driver, 10)
-            
-            # Temporarily disable inactive detection due to false positives
+            time.sleep(4)
+
             # Check if job page loads successfully (indicates job is still active)
             page_source = driver.page_source.lower()
-            if any(term in page_source for term in ['not found', '404', 'page not found', 'job not found']):
-                # For now, don't mark as inactive due to false positives
-                # job_details['active'] = False
-                # self.logger.info(f"Job appears to be inactive: {job_url}")
-                # return job_details
-                self.logger.info(f"Found inactive indicators but skipping due to false positives: {job_url}")
-                pass
+            if not page_source:
+                job_details['active'] = False
+                logging.info(f"Job appears to be inactive: {job_url}")
+                return job_details
+        
+            # Wait for content to load
+            wait = WebDriverWait(driver, 10)
             
-            wait = WebDriverWait(driver, 8)
-            
-            # Extract job description
+            # Extract job category
             try:
                 desc_elem = wait.until(EC.presence_of_element_located((By.XPATH, "//h2[contains(text(), 'DESCRIPTION')]/following-sibling::p")))
                 job_details['description'] = desc_elem.text.strip()
@@ -343,7 +337,7 @@ class AmazonJobsScraper:
     
     def scrape_job_details_parallel(self, job_links_list: List[Dict], max_workers: int = 3) -> List[Dict]:
         """
-        Scrape job details in parallel for better performance.
+        Scrape job details in parallel using a driver pool for better performance.
         
         Args:
             job_links_list: List of job information dictionaries
@@ -357,15 +351,18 @@ class AmazonJobsScraper:
         
         self.logger.info(f"Starting parallel scraping of {len(job_links_list)} jobs with {max_workers} workers")
         
-        def scrape_job_worker(job_info):
-            """Worker function for parallel job scraping."""
+        # Create driver pool once
+        self.logger.info(f"Creating driver pool with {max_workers} drivers...")
+        driver_pool = [self.setup_driver_fast() for _ in range(max_workers)]
+        
+        def scrape_job_worker(args):
+            """Worker function for parallel job scraping using driver pool."""
+            job_info, driver = args
             try:
                 # Random delay between workers
                 time.sleep(random.uniform(0, 2))
                 
-                driver = self.setup_driver_fast()
                 job_details = self.scrape_job_details_selenium_improved(driver, job_info['job_url'])
-                driver.quit()
                 
                 # Combine basic info with detailed info
                 return {
@@ -393,8 +390,14 @@ class AmazonJobsScraper:
             batch = job_links_list[i:i + batch_size]
             self.logger.info(f"Processing batch {i//batch_size + 1}/{(len(job_links_list) + batch_size - 1)//batch_size}")
             
+            # Distribute jobs across drivers in the pool
+            job_driver_pairs = []
+            for j, job_info in enumerate(batch):
+                driver_index = j % max_workers
+                job_driver_pairs.append((job_info, driver_pool[driver_index]))
+            
             with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-                batch_results = list(executor.map(scrape_job_worker, batch))
+                batch_results = list(executor.map(scrape_job_worker, job_driver_pairs))
             
             # Filter out None results
             batch_results = [r for r in batch_results if r is not None]
@@ -403,6 +406,14 @@ class AmazonJobsScraper:
             # Delay between batches
             if i + batch_size < len(job_links_list):
                 time.sleep(random.uniform(2, 5))
+        
+        # Clean up driver pool
+        self.logger.info("Cleaning up driver pool...")
+        for driver in driver_pool:
+            try:
+                driver.quit()
+            except:
+                pass
         
         self.logger.info(f"Successfully scraped {len(all_results)} jobs")
         return all_results
