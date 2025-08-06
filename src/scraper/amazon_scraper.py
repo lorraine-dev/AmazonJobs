@@ -246,14 +246,18 @@ class AmazonJobsScraper:
             ]
             
             # Debug: Log what we're seeing
-            self.logger.debug(f"Page title: {page_title}")
-            self.logger.debug(f"Page source contains 'not found': {'not found' in page_source}")
+            self.logger.info(f"Page title: {page_title}")
+            self.logger.info(f"Page source contains 'not found': {'not found' in page_source}")
             
             # Only mark as inactive if we find clear inactive indicators
-            if any(term in page_source for term in inactive_indicators) or 'not found' in page_title:
+            found_inactive_indicators = [term for term in inactive_indicators if term in page_source]
+            if found_inactive_indicators or 'not found' in page_title:
                 job_details['active'] = False
                 self.logger.info(f"Job appears to be inactive: {job_url}")
+                self.logger.info(f"Found inactive indicators: {found_inactive_indicators}")
                 return job_details
+            else:
+                self.logger.info(f"Job appears to be active: {job_url}")
             
             wait = WebDriverWait(driver, 8)
             
