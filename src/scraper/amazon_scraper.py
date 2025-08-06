@@ -90,7 +90,7 @@ class AmazonJobsScraper:
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--disable-plugins")
         chrome_options.add_argument("--disable-images")
-        # chrome_options.add_argument("--disable-javascript")  # Commented out - needed for dynamic content
+        chrome_options.add_argument("--disable-javascript")  # Disable JavaScript to avoid false positives
         chrome_options.add_argument("--disable-css")
         chrome_options.add_argument("--window-size=1920,1080")
         chrome_options.add_argument(f"--user-agent={random.choice(user_agents)}")
@@ -232,56 +232,36 @@ class AmazonJobsScraper:
             # Wait for job content to load
             wait = WebDriverWait(driver, 10)
             
-            # Check if job is still active (more robust detection)
+            # Temporarily disable inactive detection due to false positives
+            # Check if job page loads successfully (indicates job is still active)
             page_source = driver.page_source.lower()
-            page_title = driver.title.lower()
-            
-            # More specific checks for inactive jobs
-            inactive_indicators = [
-                'not found', '404', 'page not found', 'job not found',
-                'this job posting is no longer available',
-                'position has been filled',
-                'job has been removed',
-                'this position is no longer available'
-            ]
-            
-            # Debug: Log what we're seeing
-            self.logger.info(f"Page title: {page_title}")
-            self.logger.info(f"Page source contains 'not found': {'not found' in page_source}")
-            
-            # Only mark as inactive if we find clear inactive indicators
-            found_inactive_indicators = [term for term in inactive_indicators if term in page_source]
-            if found_inactive_indicators or 'not found' in page_title:
-                job_details['active'] = False
-                self.logger.info(f"Job appears to be inactive: {job_url}")
-                self.logger.info(f"Found inactive indicators: {found_inactive_indicators}")
-                return job_details
-            else:
-                self.logger.info(f"Job appears to be active: {job_url}")
+            if any(term in page_source for term in ['not found', '404', 'page not found', 'job not found']):
+                # For now, don't mark as inactive due to false positives
+                # job_details['active'] = False
+                # self.logger.info(f"Job appears to be inactive: {job_url}")
+                # return job_details
+                self.logger.info(f"Found inactive indicators but skipping due to false positives: {job_url}")
+                pass
             
             wait = WebDriverWait(driver, 8)
             
             # Extract job description
             try:
-                desc_elem = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "div.job-description")))
+                desc_elem = wait.until(EC.presence_of_element_located((By.XPATH, "//h2[contains(text(), 'DESCRIPTION')]/following-sibling::p")))
                 job_details['description'] = desc_elem.text.strip()
-                # If we can find job description, the job is definitely active
-                job_details['active'] = True
             except:
-                self.logger.info("Could not find job description section")
-                # Don't mark as inactive just because description is missing
-                # The job might still be active but with different structure
+                self.logger.info("Could not find description section")
             
             # Extract basic qualifications
             try:
-                basic_qual_elem = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "div.basic-qualifications")))
+                basic_qual_elem = wait.until(EC.presence_of_element_located((By.XPATH, "//h2[contains(text(), 'BASIC QUALIFICATIONS')]/following-sibling::p")))
                 job_details['basic_qual'] = basic_qual_elem.text.strip()
             except:
                 self.logger.info("Could not find basic qualifications section")
             
             # Extract preferred qualifications
             try:
-                pref_qual_elem = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "div.preferred-qualifications")))
+                pref_qual_elem = wait.until(EC.presence_of_element_located((By.XPATH, "//h2[contains(text(), 'PREFERRED QUALIFICATIONS')]/following-sibling::p")))
                 job_details['pref_qual'] = pref_qual_elem.text.strip()
             except:
                 self.logger.info("Could not find preferred qualifications section")

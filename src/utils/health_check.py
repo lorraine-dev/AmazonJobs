@@ -16,10 +16,10 @@ def check_scraper_health():
     print("=" * 50)
     
     # Check if data file exists and is recent
-    data_file = "data/amazon_luxembourg_jobs.csv"
+    data_file = "data/raw/amazon_luxembourg_jobs.csv"
     if not os.path.exists(data_file):
         print("❌ Data file not found")
-        print("   Expected: data/amazon_luxembourg_jobs.csv")
+        print("   Expected: data/raw/amazon_luxembourg_jobs.csv")
         return False
     
     # Check file modification time
