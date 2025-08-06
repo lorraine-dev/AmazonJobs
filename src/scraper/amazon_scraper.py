@@ -225,7 +225,12 @@ class AmazonJobsScraper:
             # Random delay to avoid rate limiting
             time.sleep(random.uniform(1, 3))
             driver.get(job_url)
-            time.sleep(2)
+            
+            # Wait for page to load and JavaScript to execute
+            time.sleep(3)
+            
+            # Wait for job content to load
+            wait = WebDriverWait(driver, 10)
             
             # Check if job is still active (more robust detection)
             page_source = driver.page_source.lower()
@@ -236,9 +241,15 @@ class AmazonJobsScraper:
                 'not found', '404', 'page not found', 'job not found',
                 'this job posting is no longer available',
                 'position has been filled',
-                'job has been removed'
+                'job has been removed',
+                'this position is no longer available'
             ]
             
+            # Debug: Log what we're seeing
+            self.logger.debug(f"Page title: {page_title}")
+            self.logger.debug(f"Page source contains 'not found': {'not found' in page_source}")
+            
+            # Only mark as inactive if we find clear inactive indicators
             if any(term in page_source for term in inactive_indicators) or 'not found' in page_title:
                 job_details['active'] = False
                 self.logger.info(f"Job appears to be inactive: {job_url}")
@@ -250,8 +261,12 @@ class AmazonJobsScraper:
             try:
                 desc_elem = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "div.job-description")))
                 job_details['description'] = desc_elem.text.strip()
+                # If we can find job description, the job is definitely active
+                job_details['active'] = True
             except:
                 self.logger.info("Could not find job description section")
+                # Don't mark as inactive just because description is missing
+                # The job might still be active but with different structure
             
             # Extract basic qualifications
             try:
