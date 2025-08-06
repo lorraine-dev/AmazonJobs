@@ -35,10 +35,12 @@ jobs:
         pip install -r requirements.txt
         
     - name: Download previous data
-      uses: actions/download-artifact@v4
+      uses: dawidd6/action-download-artifact@v3
       with:
         name: job-data
         path: data/raw/
+        workflow: scraper.yml
+        workflow_conclusion: success
       continue-on-error: true
         
     - name: Debug downloaded files
