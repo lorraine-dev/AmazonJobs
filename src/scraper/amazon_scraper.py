@@ -90,7 +90,7 @@ class AmazonJobsScraper:
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--disable-plugins")
         chrome_options.add_argument("--disable-images")
-        chrome_options.add_argument("--disable-javascript")
+        # chrome_options.add_argument("--disable-javascript")  # Commented out - needed for dynamic content
         chrome_options.add_argument("--disable-css")
         chrome_options.add_argument("--window-size=1920,1080")
         chrome_options.add_argument(f"--user-agent={random.choice(user_agents)}")
@@ -227,9 +227,19 @@ class AmazonJobsScraper:
             driver.get(job_url)
             time.sleep(2)
             
-            # Check if job is still active
+            # Check if job is still active (more robust detection)
             page_source = driver.page_source.lower()
-            if any(term in page_source for term in ['not found', '404', 'page not found', 'job not found']):
+            page_title = driver.title.lower()
+            
+            # More specific checks for inactive jobs
+            inactive_indicators = [
+                'not found', '404', 'page not found', 'job not found',
+                'this job posting is no longer available',
+                'position has been filled',
+                'job has been removed'
+            ]
+            
+            if any(term in page_source for term in inactive_indicators) or 'not found' in page_title:
                 job_details['active'] = False
                 self.logger.info(f"Job appears to be inactive: {job_url}")
                 return job_details
