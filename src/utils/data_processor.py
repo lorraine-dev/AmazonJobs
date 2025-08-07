@@ -11,6 +11,7 @@ from typing import Optional, List
 # Import the new template function
 from .dashboard_template import generate_dashboard_html_template
 from .dashboard_visuals import create_sankey_diagram
+from .data_analytics import get_skills_by_category
 
 def _generate_table_rows(df: pd.DataFrame) -> str:
     """
@@ -97,6 +98,23 @@ def create_dashboard_html(df: pd.DataFrame) -> str:
     job_categories = sorted(df['job_category'].dropna().unique().tolist())
     roles = sorted(df['role'].dropna().unique().tolist())
     teams = sorted(df['team'].dropna().unique().tolist())
+
+    # Prepare the skills data for all categories
+    skills_data = {}
+    
+    # Create a dictionary to store job counts for each category
+    category_job_counts = {'All Categories': len(df)}
+    
+    # Get skills for ALL jobs
+    all_jobs_skills = get_skills_by_category(df, job_category='ALL')
+    skills_data['All Categories'] = all_jobs_skills
+    
+    # Get skills for each specific category
+    for category in job_categories:
+        category_df = df[df['job_category'] == category]
+        skills_data[category] = get_skills_by_category(category_df, job_category=category)
+        category_job_counts[category] = len(category_df)
+
     
     table_rows = _generate_table_rows(df)
 
@@ -110,7 +128,9 @@ def create_dashboard_html(df: pd.DataFrame) -> str:
         sankey_chart_html,  
         job_categories, 
         roles, 
-        teams
+        teams,
+        skills_data,
+        category_job_counts 
     )
     
 

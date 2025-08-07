@@ -3,7 +3,9 @@ HTML template for the Amazon Jobs dashboard.
 Separated from data_processor.py for better modularity.
 """
 
-def generate_dashboard_html_template(total_jobs: int, active_jobs: int, last_updated: str, table_rows: str, sankey_chart_html: str, job_categories: list, roles: list, teams: list) -> str:
+from typing import List
+
+def generate_dashboard_html_template(total_jobs: int, active_jobs: int, last_updated: str, table_rows: str, sankey_chart_html: str, job_categories: list, roles: list, teams: list, skills_data: dict, category_job_counts: dict) -> str:
     """
     Generates the static HTML dashboard template with dynamic data injected.
     
@@ -15,6 +17,8 @@ def generate_dashboard_html_template(total_jobs: int, active_jobs: int, last_upd
         job_categories: A list of unique job categories for the filter dropdown.
         roles: A list of unique roles for the filter dropdown.
         teams: A list of unique teams for the filter dropdown.
+        skills_data: A dictionary mapping job categories to a list of their top skills.
+        category_job_counts: A dictionary with the total job count for each category.
         
     Returns:
         A complete HTML string for the dashboard.
@@ -23,6 +27,15 @@ def generate_dashboard_html_template(total_jobs: int, active_jobs: int, last_upd
     role_options = "".join([f'<option value="{r}">{r}</option>' for r in roles])
     team_options = "".join([f'<option value="{t}">{t}</option>' for t in teams])
 
+    # Convert skills_data and category_job_counts to JSON for JavaScript
+    import json
+    skills_data_json = json.dumps(skills_data)
+    category_job_counts_json = json.dumps(category_job_counts)
+    
+    # Generate the initial HTML for the skills list (for all categories)
+    total_jobs_for_all = category_job_counts.get('All Categories', 0)
+    initial_skills_html = _generate_skills_html(skills_data.get('All Categories', []), total_jobs_for_all)
+
     return f"""
 <!DOCTYPE html>
 <html lang="en">
@@ -30,133 +43,8 @@ def generate_dashboard_html_template(total_jobs: int, active_jobs: int, last_upd
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Amazon Jobs Dashboard</title>
-    <style>
-        body {{
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }}
-        .container {{
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }}
-        .header {{
-            background: #232f3e;
-            color: white;
-            padding: 20px;
-            text-align: center;
-        }}
-        .stats {{
-            display: flex;
-            justify-content: space-around;
-            padding: 20px;
-            background: #f8f9fa;
-            border-bottom: 1px solid #dee2e6;
-        }}
-        .stat {{
-            text-align: center;
-        }}
-        .stat-number {{
-            font-size: 24px;
-            font-weight: bold;
-            color: #232f3e;
-        }}
-        .stat-label {{
-            font-size: 14px;
-            color: #6c757d;
-        }}
-        .table-container {{
-            overflow-x: auto;
-            padding: 20px;
-        }}
-        table {{
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 14px;
-        }}
-        th, td {{
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #dee2e6;
-        }}
-        th {{
-            background-color: #f8f9fa;
-            font-weight: 600;
-            color: #495057;
-            cursor: pointer;
-        }}
-        th.sorted-asc::after {{
-            content: " ▲";
-        }}
-        th.sorted-desc::after {{
-            content: " ▼";
-        }}
-        tr.job-row:hover {{
-            background-color: #f8f9fa;
-            cursor: pointer;
-        }}
-        .hidden {{
-            display: none;
-        }}
-        .filter-controls {{
-            display: flex;
-            gap: 10px;
-            padding: 20px;
-            background: #f8f9fa;
-            border-bottom: 1px solid #dee2e6;
-            flex-wrap: wrap;
-        }}
-        .filter-controls label {{
-            font-weight: 600;
-            color: #495057;
-        }}
-        .filter-controls input, .filter-controls select {{
-            padding: 8px;
-            border-radius: 4px;
-            border: 1px solid #dee2e6;
-        }}
-        .active {{
-            color: #28a745;
-            font-weight: bold;
-        }}
-        .inactive {{
-            color: #dc3545;
-        }}
-        .footer {{
-            padding: 20px;
-            text-align: center;
-            color: #6c757d;
-            font-size: 12px;
-            border-top: 1px solid #dee2e6;
-        }}
-        .job-url {{
-            color: #007bff;
-            text-decoration: none;
-        }}
-        .job-url:hover {{
-            text-decoration: underline;
-        }}
-        .details-container {{
-            padding: 10px 0;
-            font-size: 13px;
-            line-height: 1.5;
-            white-space: pre-wrap;
-        }}
-        .details-container h4 {{
-            margin-top: 10px;
-            margin-bottom: 5px;
-            font-size: 14px;
-            color: #232f3e;
-        }}
-        .details-container p {{
-            margin: 0 0 10px;
-        }}
-    </style>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="skills.css">
 </head>
 <body>
     <div class="container">
@@ -213,7 +101,15 @@ def generate_dashboard_html_template(total_jobs: int, active_jobs: int, last_upd
                 </tbody>
             </table>
         </div>
-        <div id="sankey-chart-container" style="padding: 20px;">
+
+        <div id="skills-container" class="skills-container">
+            <h3 id="skills-header">Top Skills for All Categories</h3>
+            <div id="skills-list">
+                {initial_skills_html}
+            </div>
+        </div>
+        
+        <div id="sankey-chart-container" class="sankey-container">
             <h3>Job Distribution Flow</h3>
             {sankey_chart_html}
         </div>
@@ -224,6 +120,34 @@ def generate_dashboard_html_template(total_jobs: int, active_jobs: int, last_upd
     </div>
 
     <script>
+        const skillsData = {skills_data_json};
+        const categoryJobCounts = {category_job_counts_json};
+
+        function generateSkillsHtml(skills, totalJobs) {{
+            if (!skills || skills.length === 0 || totalJobs === 0) {{
+                return '<p>No specific skills found for this category.</p>';
+            }}
+            let html = '<div class="skills-grid">';
+            skills.slice(0, 10).forEach(skill => {{
+                const name = skill[0];
+                const counts = skill[1];
+                const total = counts.basic_count + counts.preferred_count;
+                const percentage = (total / totalJobs) * 100;
+                
+                html += `
+                    <div class="skill-item">
+                        <span class="skill-name">${{name}}</span>
+                        <div class="skill-bar-container">
+                            <div class="skill-bar" style="width: ${{percentage.toFixed(1)}}%;"></div>
+                        </div>
+                        <span class="skill-percentage">${{percentage.toFixed(1)}}%</span>
+                    </div>
+                `;
+            }});
+            html += '</div>';
+            return html;
+        }}
+
         document.addEventListener('DOMContentLoaded', () => {{
             const table = document.getElementById('job-table');
             const tbody = table.querySelector('tbody');
@@ -232,6 +156,8 @@ def generate_dashboard_html_template(total_jobs: int, active_jobs: int, last_upd
             const categoryFilter = document.getElementById('category-filter');
             const statusFilter = document.getElementById('status-filter');
             const postingDateHeader = document.getElementById('posting-date-header');
+            const skillsHeader = document.getElementById('skills-header');
+            const skillsListContainer = document.getElementById('skills-list');
             
             let sortDirection = 'desc';
 
@@ -256,6 +182,14 @@ def generate_dashboard_html_template(total_jobs: int, active_jobs: int, last_upd
                         row.classList.add('hidden');
                     }}
                 }});
+
+                // Update skills list based on the selected category
+                const categoryKey = selectedCategory || 'All Categories';
+                const skillsForCategory = skillsData[categoryKey] || [];
+                const totalJobsForCategory = categoryJobCounts[categoryKey] || 0;
+                
+                skillsHeader.textContent = `Top Skills for ${{categoryKey}} (${{totalJobsForCategory}} jobs)`;
+                skillsListContainer.innerHTML = generateSkillsHtml(skillsForCategory, totalJobsForCategory);
             }}
 
             function sortTable() {{
@@ -311,3 +245,28 @@ def generate_dashboard_html_template(total_jobs: int, active_jobs: int, last_upd
 </body>
 </html>
 """
+
+def _generate_skills_html(skills_list: List, total_jobs_in_category: int) -> str:
+    """
+    Helper function to generate the HTML for the skills list,
+    displaying each skill's prevalence as a percentage.
+    """
+    if not skills_list or total_jobs_in_category == 0:
+        return '<p>No specific skills found for this category.</p>'
+
+    html = '<div class="skills-grid">'
+    # We will only show the top 10 skills
+    for skill_item in skills_list[:10]:
+        skill, counts, total = skill_item
+        percentage = (total / total_jobs_in_category) * 100
+        html += f"""
+            <div class="skill-item">
+                <span class="skill-name">{skill}</span>
+                <div class="skill-bar-container">
+                    <div class="skill-bar" style="width: {percentage:.1f}%;"></div>
+                </div>
+                <span class="skill-percentage">{percentage:.1f}%</span>
+            </div>
+        """
+    html += '</div>'
+    return html

@@ -1,0 +1,50 @@
+/* docs/skills.css */
+
+.skills-container {
+    padding: 20px;
+}
+
+.skills-grid {
+    display: flex; /* CHANGE: Use Flexbox for a simpler container */
+    flex-direction: column;
+    gap: 15px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.skill-item {
+    display: flex; /* NEW: Use Flexbox for each item's layout */
+    align-items: center;
+    gap: 10px; /* Spacing between the name, bar, and percentage */
+}
+
+.skill-name {
+    font-weight: 500;
+    color: #232f3e;
+    flex: 1; /* NEW: Allow the name to grow and take up space */
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+}
+
+.skill-bar-container {
+    background-color: #e9ecef;
+    border-radius: 4px;
+    height: 10px;
+    width: 250px; /* NEW: Give the bar container a fixed width */
+}
+
+.skill-bar {
+    background-color: #ff9900;
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease-in-out;
+}
+
+.skill-percentage {
+    font-size: 14px;
+    color: #6c757d;
+    text-align: right;
+    width: 50px;
+    min-width: 50px; /* NEW: Ensure the percentage label has enough space */
+}
