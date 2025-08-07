@@ -17,9 +17,10 @@ This project:
 
 The dashboard shows:
 - **Job statistics** (total, active, inactive)
-- **Job listings** in a scrollable table
-- **Job details** (title, role, team, category, posting date)
-- **Direct links** to job applications
+- **Job listings** in a scrollable table with sorting, filtering, and searching capabilities.
+- **Key job details** (title, role, team, category, posting date).
+- **Interactive data visualizations**, including a Sankey diagram and a skill-prevalence chart.
+- **Direct links** to job applications.
 
 ---
 
@@ -37,12 +38,18 @@ The dashboard shows:
 ```
 ├── .github/workflows/scraper.yml    # Automated workflow
 ├── src/scraper/amazon_scraper.py    # Main scraper
+├── src/utils/dashboard_template.py  # Helper script to generate the main HTML  
+├── src/utils/dashboard_visuals.py   # Helper script to generate sankey diagram for the dashboard
+├── src/utils/data_analytics.py      # Helper script for advanced analytics like skill breakdown
 ├── src/utils/data_processor.py      # Dashboard generator
 ├── src/scripts/run_scraper.py       # Execution script
 ├── config/scraper_config.yaml       # Configuration
 ├── docs/index.html                  # Dashboard (auto-generated)
-└── requirements.txt                  # Dependencies
-└── README.md                         # Project documentation
+├── docs/skills.css                  # Skills visualization styles
+├── docs/style.css                   # Main dashboard styles
+├── docs/reference/                  # HTML references for debugging
+└── requirements.txt                 # Dependencies
+└── README.md                        # Project documentation
 ```
 
 
