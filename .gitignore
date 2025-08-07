@@ -136,10 +136,7 @@ logs/
 backups/
 
 # Documentation files (keep local only)
-ORGANIZATION_SUMMARY.md
-VERIFICATION_SUMMARY.md
-scheduler_setup.md
-ESSENTIAL_FILES.md
+INTERNAL_NOTES.md
 
 # IDE
 .vscode/
@@ -168,3 +165,36 @@ chromedriver.exe
 # Local configuration
 .env.local
 .env.production 
+
+# --- Allow only essential files for production flow ---
+
+# Allow GitHub Actions workflow
+!.github/
+!.github/workflows/
+!.github/workflows/scraper.yml
+
+# Allow core source code
+!src/
+!src/scraper/
+!src/scraper/amazon_scraper.py
+!src/utils/
+!src/utils/data_processor.py
+!src/scripts/
+!src/scripts/run_scraper.py
+
+# Allow configuration
+!config/
+!config/scraper_config.yaml
+
+# Allow dashboard output
+!docs/
+!docs/index.html
+
+# Allow main documentation and dependencies
+!README.md
+!requirements.txt
+!setup.py
+
+# Optionally: allow the latest raw data file (remove if you want zero data in repo)
+!data/raw/
+!data/raw/amazon_luxembourg_jobs.csv

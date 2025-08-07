@@ -1,20 +1,17 @@
 # Amazon Jobs Dashboard
 
-A personal job monitoring dashboard that automatically scrapes Amazon Jobs Luxembourg and displays the results in a web dashboard.
+A personal dashboard that automatically scrapes Amazon Jobs Luxembourg and displays the results as a web dashboard.
 
-## 🎯 Overview
+---
 
-This project automatically:
-1. **Scrapes Amazon Jobs** (3x daily)
-2. **Processes the data** (CSV to HTML)
-3. **Deploys to GitHub Pages** (web dashboard)
+## 🚀 Overview
 
-## 🚀 Features
+This project:
+- **Scrapes Amazon Jobs** (scheduled via GitHub Actions)
+- **Processes the data** (CSV to HTML)
+- **Deploys to GitHub Pages** (auto-updating dashboard)
 
-- **Automated scraping** (8am, 1pm, 6pm UTC)
-- **Real-time dashboard** with job listings
-- **Mobile-friendly** responsive design
-- **Private repository** for personal use
+---
 
 ## 📊 Dashboard
 
@@ -24,15 +21,18 @@ The dashboard shows:
 - **Job details** (title, role, team, category, posting date)
 - **Direct links** to job applications
 
+---
+
 ## 🛠️ Technology Stack
 
-- **Python** - Core scraping logic
-- **Selenium** - Web automation
-- **Pandas** - Data processing
-- **GitHub Actions** - Automated scheduling
-- **GitHub Pages** - Web hosting
+- **Python** (Selenium, Pandas)
+- **GitHub Actions** (automation)
+- **GitHub Pages** (hosting)
 
-## 📁 Repository Structure
+---
+
+## 📁 Project Structure
+
 
 ```
 ├── .github/workflows/scraper.yml    # Automated workflow
@@ -42,36 +42,54 @@ The dashboard shows:
 ├── config/scraper_config.yaml       # Configuration
 ├── docs/index.html                  # Dashboard (auto-generated)
 └── requirements.txt                  # Dependencies
+└── README.md                         # Project documentation
 ```
 
-## 🔧 Configuration
-
-The scraper is configured via `config/scraper_config.yaml`:
-
-```yaml
-scraper:
-  base_url: "https://amazon.jobs/en/search?..."
-  max_workers: 3
-  batch_size: 10
-```
-
-## 📈 Workflow
-
-1. **GitHub Actions** runs the scraper 3x daily
-2. **Scraper** collects job data and saves to CSV
-3. **Data processor** converts CSV to HTML dashboard
-4. **GitHub Pages** serves the dashboard automatically
-
-## 🔒 Privacy
-
-- **Private repository** by default
-- **Personal use only**
-- **No data sharing**
-
-## 📝 License
-
-Personal project - not for distribution.
 
 ---
 
-*Last updated: Automatically updated 3x daily* 
+## ⚡ Usage
+
+### View the Dashboard
+
+- Visit the [GitHub Pages site](https://lorraine-dev.github.io/AmazonJobs/) (auto-updated after each scheduled run).
+
+### Run Locally (Advanced)
+
+1. Clone the repository.
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. Edit `config/scraper_config.yaml` if needed.
+4. Run the scraper:
+   ```bash
+   python src/scripts/run_scraper.py
+   ```
+5. Generate the dashboard:
+   ```bash
+   python src/utils/data_processor.py
+   ```
+
+---
+
+## ⚙️ Configuration
+
+Edit `config/scraper_config.yaml` to change scraping parameters (e.g., base URL, number of workers).
+
+---
+
+## 🤖 Automation
+
+- **GitHub Actions** runs the scraper and updates the dashboard automatically on a schedule.
+- No manual intervention required for regular operation.
+
+---
+
+## 📝 License
+
+Personal project. For educational and personal use only.
+
+---
+
+*Last updated: Automatically updated via GitHub Actions*
