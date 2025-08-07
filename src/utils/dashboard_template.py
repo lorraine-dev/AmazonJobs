@@ -190,13 +190,11 @@ def generate_dashboard_html_template(total_jobs: int, active_jobs: int, last_upd
             <table id="job-table">
                 <thead>
                     <tr>
-                        <th>Title</th>
                         <th>Role</th>
                         <th>Team</th>
                         <th>Category</th>
                         <th id="posting-date-header" class="sortable">Posted</th>
                         <th>Status</th>
-                        <th>Link</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -229,10 +227,10 @@ def generate_dashboard_html_template(total_jobs: int, active_jobs: int, last_upd
                 const selectedStatus = statusFilter.value;
 
                 rows.forEach(row => {{
-                    const roleText = row.children[1].textContent.toLowerCase();
-                    const teamText = row.children[2].textContent.toLowerCase();
-                    const categoryText = row.children[3].textContent;
-                    const statusText = row.children[5].textContent;
+                    const roleText = row.children[0].textContent.toLowerCase();
+                    const teamText = row.children[1].textContent.toLowerCase();
+                    const categoryText = row.children[2].textContent;
+                    const statusText = row.children[4].textContent;
 
                     const matchesSearch = searchTerm === '' || roleText.includes(searchTerm) || teamText.includes(searchTerm);
                     const matchesCategory = selectedCategory === '' || categoryText === selectedCategory;

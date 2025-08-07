@@ -43,17 +43,18 @@ def _generate_table_rows(df: pd.DataFrame) -> str:
         
         # Create job URL
         job_url = row.get('job_url', '')
-        job_link = f'<a href="{job_url}" target="_blank" class="job-url">View Job</a>' if job_url else "N/A"
         
+        # Embed the URL into the Role text
+        role_text = row.get('role', 'N/A')
+        role_link = f'<a href="{job_url}" target="_blank" class="job-url">{role_text}</a>' if job_url else role_text
+
         html_rows.append(f"""
                     <tr>
-                        <td class="job-title">{row.get('title', 'N/A')}</td>
-                        <td>{row.get('role', 'N/A')}</td>
+                        <td>{role_link}</td>
                         <td>{row.get('team', 'N/A')}</td>
                         <td>{row.get('job_category', 'N/A')}</td>
                         <td>{posting_date}</td>
                         <td class="{status_class}">{status_text}</td>
-                        <td>{job_link}</td>
                     </tr>
         """)
         
