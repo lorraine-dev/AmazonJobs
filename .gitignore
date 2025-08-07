@@ -129,6 +129,7 @@ notebooks/
 tests/
 examples/
 deployment/
+scripts/
 
 # Data files (keep local only)
 data/

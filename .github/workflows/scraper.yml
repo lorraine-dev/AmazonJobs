@@ -2,8 +2,8 @@ name: Amazon Jobs Scraper
 
 on:
   schedule:
-    # Run at 8am, 1pm, and 6pm UTC (adjust for your timezone)
-    - cron: '0 8,13,18 * * *'
+    # Run at 8am, and 2pm UTC (adjust for your timezone)
+    - cron: '0 8,14 * * *'
   workflow_dispatch:  # Allow manual trigger
 
 permissions:
