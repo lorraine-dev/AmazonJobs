@@ -90,7 +90,7 @@ class AmazonJobsScraper:
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--disable-plugins")
         chrome_options.add_argument("--disable-images")
-        chrome_options.add_argument("--disable-javascript")  # Disable JavaScript to avoid false positives
+        # chrome_options.add_argument("--disable-javascript")  # Disable JavaScript to avoid false positives
         chrome_options.add_argument("--disable-css")
         chrome_options.add_argument("--window-size=1920,1080")
         chrome_options.add_argument(f"--user-agent={random.choice(user_agents)}")

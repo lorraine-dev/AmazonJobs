@@ -6,7 +6,82 @@ Converts CSV data to HTML dashboard
 import pandas as pd
 from pathlib import Path
 from datetime import datetime
-import os
+from typing import Optional, List
+
+# Import the new template function
+from .dashboard_template import generate_dashboard_html_template
+
+def _generate_table_rows(df: pd.DataFrame) -> str:
+    """
+    Generates the HTML table rows from the DataFrame.
+    
+    Args:
+        df: DataFrame with job data.
+        
+    Returns:
+        A string of HTML <tr> tags for the table body.
+    """
+    html_rows = []
+    for _, row in df.iterrows():
+        # Format posting date
+        posting_date = row.get('posting_date', '')
+        if posting_date and pd.notna(posting_date):
+            try:
+                if isinstance(posting_date, str):
+                    posting_date = pd.to_datetime(posting_date).strftime("%Y-%m-%d")
+                else:
+                    posting_date = posting_date.strftime("%Y-%m-%d")
+            except:
+                posting_date = str(posting_date)
+        else:
+            posting_date = "N/A"
+        
+        # Format active status
+        active_status = row.get('active', True)
+        status_class = "active" if active_status else "inactive"
+        status_text = "Active" if active_status else "Inactive"
+        
+        # Create job URL
+        job_url = row.get('job_url', '')
+        job_link = f'<a href="{job_url}" target="_blank" class="job-url">View Job</a>' if job_url else "N/A"
+        
+        html_rows.append(f"""
+                    <tr>
+                        <td class="job-title">{row.get('title', 'N/A')}</td>
+                        <td>{row.get('role', 'N/A')}</td>
+                        <td>{row.get('team', 'N/A')}</td>
+                        <td>{row.get('job_category', 'N/A')}</td>
+                        <td>{posting_date}</td>
+                        <td class="{status_class}">{status_text}</td>
+                        <td>{job_link}</td>
+                    </tr>
+        """)
+        
+    return "".join(html_rows)
+
+def create_dashboard_html(df: pd.DataFrame) -> str:
+    """
+    Creates the complete HTML dashboard by combining the template and table rows.
+    
+    Args:
+        df: DataFrame with job data.
+        
+    Returns:
+        Complete HTML string for the dashboard.
+    """
+    total_jobs = len(df)
+    active_jobs = df['active'].sum() if 'active' in df.columns else 0
+    last_updated = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    # Get unique values for filters from the DataFrame
+    job_categories = sorted(df['job_category'].dropna().unique().tolist())
+    roles = sorted(df['role'].dropna().unique().tolist())
+    teams = sorted(df['team'].dropna().unique().tolist())
+    
+    table_rows = _generate_table_rows(df)
+    
+    return generate_dashboard_html_template(total_jobs, active_jobs, last_updated, table_rows, job_categories, roles, teams)
+
 
 def csv_to_html_table(csv_path: str, output_path: str = None) -> str:
     """
@@ -41,211 +116,6 @@ def csv_to_html_table(csv_path: str, output_path: str = None) -> str:
             print(f"❌ Error saving HTML: {e}")
     
     return html_content
-
-def create_dashboard_html(df: pd.DataFrame) -> str:
-    """
-    Create HTML dashboard from DataFrame.
-    
-    Args:
-        df: DataFrame with job data
-        
-    Returns:
-        HTML string
-    """
-    
-    # Get basic stats
-    total_jobs = len(df)
-    active_jobs = df['active'].sum() if 'active' in df.columns else 0
-    last_updated = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    
-    # Create HTML
-    html = f"""
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Amazon Jobs Dashboard</title>
-    <style>
-        body {{
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }}
-        .container {{
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }}
-        .header {{
-            background: #232f3e;
-            color: white;
-            padding: 20px;
-            text-align: center;
-        }}
-        .stats {{
-            display: flex;
-            justify-content: space-around;
-            padding: 20px;
-            background: #f8f9fa;
-            border-bottom: 1px solid #dee2e6;
-        }}
-        .stat {{
-            text-align: center;
-        }}
-        .stat-number {{
-            font-size: 24px;
-            font-weight: bold;
-            color: #232f3e;
-        }}
-        .stat-label {{
-            font-size: 14px;
-            color: #6c757d;
-        }}
-        .table-container {{
-            overflow-x: auto;
-            padding: 20px;
-        }}
-        table {{
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 14px;
-        }}
-        th, td {{
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #dee2e6;
-        }}
-        th {{
-            background-color: #f8f9fa;
-            font-weight: 600;
-            color: #495057;
-        }}
-        tr:hover {{
-            background-color: #f8f9fa;
-        }}
-        .active {{
-            color: #28a745;
-            font-weight: bold;
-        }}
-        .inactive {{
-            color: #dc3545;
-        }}
-        .footer {{
-            padding: 20px;
-            text-align: center;
-            color: #6c757d;
-            font-size: 12px;
-            border-top: 1px solid #dee2e6;
-        }}
-        .job-title {{
-            font-weight: 600;
-            color: #232f3e;
-        }}
-        .job-url {{
-            color: #007bff;
-            text-decoration: none;
-        }}
-        .job-url:hover {{
-            text-decoration: underline;
-        }}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>Amazon Jobs Dashboard</h1>
-            <p>Personal job monitoring dashboard</p>
-        </div>
-        
-        <div class="stats">
-            <div class="stat">
-                <div class="stat-number">{total_jobs}</div>
-                <div class="stat-label">Total Jobs</div>
-            </div>
-            <div class="stat">
-                <div class="stat-number">{active_jobs}</div>
-                <div class="stat-label">Active Jobs</div>
-            </div>
-            <div class="stat">
-                <div class="stat-number">{total_jobs - active_jobs}</div>
-                <div class="stat-label">Inactive Jobs</div>
-            </div>
-        </div>
-        
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Title</th>
-                        <th>Role</th>
-                        <th>Team</th>
-                        <th>Category</th>
-                        <th>Posted</th>
-                        <th>Status</th>
-                        <th>Link</th>
-                    </tr>
-                </thead>
-                <tbody>
-"""
-    
-    # Add table rows
-    for _, row in df.iterrows():
-        # Format posting date
-        posting_date = row.get('posting_date', '')
-        if posting_date and pd.notna(posting_date):
-            try:
-                if isinstance(posting_date, str):
-                    posting_date = pd.to_datetime(posting_date).strftime("%Y-%m-%d")
-                else:
-                    posting_date = posting_date.strftime("%Y-%m-%d")
-            except:
-                posting_date = str(posting_date)
-        else:
-            posting_date = "N/A"
-        
-        # Format active status
-        active_status = row.get('active', True)
-        status_class = "active" if active_status else "inactive"
-        status_text = "Active" if active_status else "Inactive"
-        
-        # Create job URL
-        job_url = row.get('job_url', '')
-        job_link = f'<a href="{job_url}" target="_blank" class="job-url">View Job</a>' if job_url else "N/A"
-        
-        # Add row to HTML
-        html += f"""
-                    <tr>
-                        <td class="job-title">{row.get('title', 'N/A')}</td>
-                        <td>{row.get('role', 'N/A')}</td>
-                        <td>{row.get('team', 'N/A')}</td>
-                        <td>{row.get('job_category', 'N/A')}</td>
-                        <td>{posting_date}</td>
-                        <td class="{status_class}">{status_text}</td>
-                        <td>{job_link}</td>
-                    </tr>
-"""
-    
-    # Close HTML
-    html += f"""
-                </tbody>
-            </table>
-        </div>
-        
-        <div class="footer">
-            <p>Last updated: {last_updated}</p>
-            <p>Data source: Amazon Jobs Luxembourg</p>
-        </div>
-    </div>
-</body>
-</html>
-"""
-    
-    return html
 
 def create_error_html(message: str) -> str:
     """Create error HTML when data loading fails."""
@@ -331,4 +201,4 @@ def process_latest_data():
 
 if __name__ == "__main__":
     # Test the data processor
-    process_latest_data() 
+    process_latest_data()
