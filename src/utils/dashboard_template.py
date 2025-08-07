@@ -3,7 +3,7 @@ HTML template for the Amazon Jobs dashboard.
 Separated from data_processor.py for better modularity.
 """
 
-def generate_dashboard_html_template(total_jobs: int, active_jobs: int, last_updated: str, table_rows: str, job_categories: list, roles: list, teams: list) -> str:
+def generate_dashboard_html_template(total_jobs: int, active_jobs: int, last_updated: str, table_rows: str, sankey_chart_html: str, job_categories: list, roles: list, teams: list) -> str:
     """
     Generates the static HTML dashboard template with dynamic data injected.
     
@@ -96,7 +96,11 @@ def generate_dashboard_html_template(total_jobs: int, active_jobs: int, last_upd
         th.sorted-desc::after {{
             content: " ▼";
         }}
-        tr.hidden {{
+        tr.job-row:hover {{
+            background-color: #f8f9fa;
+            cursor: pointer;
+        }}
+        .hidden {{
             display: none;
         }}
         .filter-controls {{
@@ -116,9 +120,6 @@ def generate_dashboard_html_template(total_jobs: int, active_jobs: int, last_upd
             border-radius: 4px;
             border: 1px solid #dee2e6;
         }}
-        tr:hover {{
-            background-color: #f8f9fa;
-        }}
         .active {{
             color: #28a745;
             font-weight: bold;
@@ -133,16 +134,27 @@ def generate_dashboard_html_template(total_jobs: int, active_jobs: int, last_upd
             font-size: 12px;
             border-top: 1px solid #dee2e6;
         }}
-        .job-title {{
-            font-weight: 600;
-            color: #232f3e;
-        }}
         .job-url {{
             color: #007bff;
             text-decoration: none;
         }}
         .job-url:hover {{
             text-decoration: underline;
+        }}
+        .details-container {{
+            padding: 10px 0;
+            font-size: 13px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }}
+        .details-container h4 {{
+            margin-top: 10px;
+            margin-bottom: 5px;
+            font-size: 14px;
+            color: #232f3e;
+        }}
+        .details-container p {{
+            margin: 0 0 10px;
         }}
     </style>
 </head>
@@ -190,8 +202,7 @@ def generate_dashboard_html_template(total_jobs: int, active_jobs: int, last_upd
             <table id="job-table">
                 <thead>
                     <tr>
-                        <th>Role</th>
-                        <th>Team</th>
+                        <th colspan="2">Role / Team</th>
                         <th>Category</th>
                         <th id="posting-date-header" class="sortable">Posted</th>
                         <th>Status</th>
@@ -202,7 +213,10 @@ def generate_dashboard_html_template(total_jobs: int, active_jobs: int, last_upd
                 </tbody>
             </table>
         </div>
-        
+        <div id="sankey-chart-container" style="padding: 20px;">
+            <h3>Job Distribution Flow</h3>
+            {sankey_chart_html}
+        </div>
         <div class="footer">
             <p>Last updated: {last_updated}</p>
             <p>Data source: Amazon Jobs Luxembourg</p>
@@ -213,7 +227,7 @@ def generate_dashboard_html_template(total_jobs: int, active_jobs: int, last_upd
         document.addEventListener('DOMContentLoaded', () => {{
             const table = document.getElementById('job-table');
             const tbody = table.querySelector('tbody');
-            const rows = Array.from(tbody.querySelectorAll('tr'));
+            const rows = Array.from(tbody.querySelectorAll('tr.job-row'));
             const searchInput = document.getElementById('search-input');
             const categoryFilter = document.getElementById('category-filter');
             const statusFilter = document.getElementById('status-filter');
@@ -227,7 +241,7 @@ def generate_dashboard_html_template(total_jobs: int, active_jobs: int, last_upd
                 const selectedStatus = statusFilter.value;
 
                 rows.forEach(row => {{
-                    const roleText = row.children[0].textContent.toLowerCase();
+                    const roleText = row.children[0].querySelector('.summary-content').textContent.toLowerCase();
                     const teamText = row.children[1].textContent.toLowerCase();
                     const categoryText = row.children[2].textContent;
                     const statusText = row.children[4].textContent;
@@ -281,6 +295,17 @@ def generate_dashboard_html_template(total_jobs: int, active_jobs: int, last_upd
             categoryFilter.addEventListener('change', applyFilters);
             statusFilter.addEventListener('change', applyFilters);
             postingDateHeader.addEventListener('click', sortTable);
+
+            // Add click event for expanding rows
+            tbody.addEventListener('click', (event) => {{
+                let targetRow = event.target.closest('tr.job-row');
+                if (targetRow) {{
+                    const detailsContainer = targetRow.querySelector('.details-container');
+                    if (detailsContainer) {{
+                        detailsContainer.classList.toggle('hidden');
+                    }}
+                }}
+            }});
         }});
     </script>
 </body>

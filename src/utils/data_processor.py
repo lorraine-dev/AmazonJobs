@@ -10,6 +10,7 @@ from typing import Optional, List
 
 # Import the new template function
 from .dashboard_template import generate_dashboard_html_template
+from .dashboard_visuals import create_sankey_diagram
 
 def _generate_table_rows(df: pd.DataFrame) -> str:
     """
@@ -22,7 +23,7 @@ def _generate_table_rows(df: pd.DataFrame) -> str:
         A string of HTML <tr> tags for the table body.
     """
     html_rows = []
-    for _, row in df.iterrows():
+    for index, row in df.iterrows():
         # Format posting date
         posting_date = row.get('posting_date', '')
         if posting_date and pd.notna(posting_date):
@@ -48,14 +49,32 @@ def _generate_table_rows(df: pd.DataFrame) -> str:
         role_text = row.get('role', 'N/A')
         role_link = f'<a href="{job_url}" target="_blank" class="job-url">{role_text}</a>' if job_url else role_text
 
+        # Extract description and qualifications, handling potential NaN
+        description = str(row.get('description', 'N/A')) if pd.notna(row.get('description')) else 'N/A'
+        basic_qual = str(row.get('basic_qual', 'N/A')) if pd.notna(row.get('basic_qual')) else 'N/A'
+        pref_qual = str(row.get('pref_qual', 'N/A')) if pd.notna(row.get('pref_qual')) else 'N/A'
+        
+        # We will use a single row for both summary and details.
         html_rows.append(f"""
-                    <tr>
-                        <td>{role_link}</td>
-                        <td>{row.get('team', 'N/A')}</td>
-                        <td>{row.get('job_category', 'N/A')}</td>
-                        <td>{posting_date}</td>
-                        <td class="{status_class}">{status_text}</td>
-                    </tr>
+            <tr class="job-row" data-job-id="{index}">
+                <td class="toggle-cell">
+                    <div class="summary-content">
+                        {role_link}
+                    </div>
+                    <div class="details-container hidden">
+                        <h4>Description</h4>
+                        <p>{description}</p>
+                        <h4>Basic Qualifications</h4>
+                        <p>{basic_qual}</p>
+                        <h4>Preferred Qualifications</h4>
+                        <p>{pref_qual}</p>
+                    </div>
+                </td>
+                <td>{row.get('team', 'N/A')}</td>
+                <td>{row.get('job_category', 'N/A')}</td>
+                <td>{posting_date}</td>
+                <td class="{status_class}">{status_text}</td>
+            </tr>
         """)
         
     return "".join(html_rows)
@@ -80,8 +99,20 @@ def create_dashboard_html(df: pd.DataFrame) -> str:
     teams = sorted(df['team'].dropna().unique().tolist())
     
     table_rows = _generate_table_rows(df)
+
+    sankey_chart_html = create_sankey_diagram(df, as_html=True)
     
-    return generate_dashboard_html_template(total_jobs, active_jobs, last_updated, table_rows, job_categories, roles, teams)
+    return generate_dashboard_html_template(
+        total_jobs, 
+        active_jobs, 
+        last_updated, 
+        table_rows, 
+        sankey_chart_html,  
+        job_categories, 
+        roles, 
+        teams
+    )
+    
 
 
 def csv_to_html_table(csv_path: str, output_path: str = None) -> str:
