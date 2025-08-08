@@ -246,7 +246,7 @@ class AmazonJobsScraper:
             page_source = driver.page_source.lower()
             if not page_source:
                 job_details["active"] = False
-                logging.info(f"Job appears to be inactive: {job_url}")
+                self.logger.debug(f"Job appears to be inactive: {job_url}")
                 return job_details
 
             # Wait for content to load
@@ -264,7 +264,7 @@ class AmazonJobsScraper:
                 )
                 job_details["description"] = desc_elem.text.strip()
             except Exception:
-                self.logger.info("Could not find description section")
+                self.logger.debug("Could not find description section")
 
             # Extract basic qualifications
             try:
@@ -278,7 +278,7 @@ class AmazonJobsScraper:
                 )
                 job_details["basic_qual"] = basic_qual_elem.text.strip()
             except Exception:
-                self.logger.info("Could not find basic qualifications section")
+                self.logger.debug("Could not find basic qualifications section")
 
             # Extract preferred qualifications
             try:
@@ -292,7 +292,7 @@ class AmazonJobsScraper:
                 )
                 job_details["pref_qual"] = pref_qual_elem.text.strip()
             except Exception:
-                self.logger.info("Could not find preferred qualifications section")
+                self.logger.debug("Could not find preferred qualifications section")
 
             # Extract job category
             try:
@@ -303,7 +303,7 @@ class AmazonJobsScraper:
                 )
                 job_details["job_category"] = category_elem.text.strip()
             except Exception:
-                self.logger.info("Could not find job category section")
+                self.logger.debug("Could not find job category section")
 
         except Exception as e:
             self.logger.error(f"Error scraping job details from {job_url}: {str(e)}")
@@ -574,7 +574,7 @@ class AmazonJobsScraper:
 
                                 # Skip existing jobs
                                 if job_id in existing_job_ids:
-                                    self.logger.info(
+                                    self.logger.debug(
                                         f"Skipping existing job ID: {job_id}"
                                     )
                                     continue
@@ -623,7 +623,7 @@ class AmazonJobsScraper:
                                     }
                                 )
 
-                                self.logger.info(f"Found job {i+1}: {title}")
+                                self.logger.debug(f"Found job {i+1}: {title}")
 
                             except Exception as e:
                                 self.logger.error(f"Error extracting job {i+1}: {e}")
@@ -642,7 +642,7 @@ class AmazonJobsScraper:
                                 )
                             )
 
-                        self.logger.info(
+                        self.logger.debug(
                             f"Added {len(page_job_links)} job links from page {page}"
                         )
 
@@ -686,7 +686,7 @@ class AmazonJobsScraper:
                             existing_df.at[idx, "active"] = job_id in self.seen_job_ids
 
                         active_count = existing_df["active"].sum()
-                        self.logger.info(
+                        self.logger.debug(
                             f"Updated active status: {active_count} active jobs, {len(existing_df) - active_count} inactive jobs"
                         )
 
@@ -698,7 +698,7 @@ class AmazonJobsScraper:
                         ),
                     )
                     existing_df.to_csv(output_path, index=False)
-                    self.logger.info(f"Updated data saved to {output_path}")
+                    self.logger.debug(f"Updated data saved to {output_path}")
                     return existing_df
 
                 # Convert to list for parallel processing
