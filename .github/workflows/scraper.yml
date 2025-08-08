@@ -2,8 +2,8 @@ name: Amazon Jobs Scraper
 
 on:
   schedule:
-    # Run at 8am, and 2pm UTC (adjust for your timezone)
-    - cron: '0 8,14 * * *'
+    # Run at 8am, 2pm, and 6pm UTC (3x daily)
+    - cron: '0 8,14,18 * * *'
   workflow_dispatch:  # Allow manual trigger
 
 permissions:
@@ -14,26 +14,26 @@ permissions:
 jobs:
   scrape-and-deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
-        
+
     - name: Install Chrome
       run: |
         sudo apt-get update
         sudo apt-get install -y google-chrome-stable
-        
+
     - name: Install dependencies
       run: |
         pip install --upgrade pip
         pip install -r requirements.txt
-        
+
     - name: Download previous data
       uses: dawidd6/action-download-artifact@v3
       with:
@@ -42,36 +42,61 @@ jobs:
         workflow: scraper.yml
         workflow_conclusion: success
       continue-on-error: true
-        
+
     - name: Debug downloaded files
       run: |
         echo "=== Checking downloaded files ==="
         ls -la data/raw/ || echo "data/raw/ directory not found"
         find . -name "*.csv" -type f || echo "No CSV files found"
-        
-    - name: Run scraper
+
+    - name: Run scraper with timeout
+      id: scraper
       run: |
-        python src/scripts/run_scraper.py
-        
+        timeout 1800 python src/scripts/run_scraper.py  # 30 minute timeout
+      continue-on-error: true
+
+    - name: Check scraper success
+      run: |
+        if [ "${{ steps.scraper.outcome }}" == "success" ]; then
+          echo "✅ Scraper completed successfully"
+        else
+          echo "❌ Scraper failed or timed out"
+          exit 1
+        fi
+
     - name: Upload job data
       uses: actions/upload-artifact@v4
       with:
         name: job-data
         path: data/raw/
         retention-days: 30
-        
+
     - name: Generate dashboard
       run: |
         python -m src.utils.data_processor
-        
+
     - name: Setup Pages
       uses: actions/configure-pages@v4
-      
+
     - name: Upload artifact
       uses: actions/upload-pages-artifact@v3
       with:
         path: ./docs
-        
+
     - name: Deploy to GitHub Pages
       id: deployment
-      uses: actions/deploy-pages@v4 
+      uses: actions/deploy-pages@v4
+
+    - name: Notify on success
+      if: success()
+      run: |
+        echo "✅ Amazon Jobs Scraper completed successfully"
+        echo "📊 Dashboard deployed to: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
+        echo "📅 Run completed at: $(date)"
+
+    - name: Notify on failure
+      if: failure()
+      run: |
+        echo "❌ Amazon Jobs Scraper failed"
+        echo "📅 Failure occurred at: $(date)"
+        echo "🔍 Check the logs above for details"

@@ -132,6 +132,10 @@ examples/
 deployment/
 scripts/
 
+# Development tools
+.pre-commit-config.yaml
+requirements-dev.txt
+
 # Data files (keep local only)
 data/
 logs/
@@ -139,6 +143,7 @@ backups/
 
 # Documentation files (keep local only)
 INTERNAL_NOTES.md
+PROJECT_OPTIMIZATION.md
 ProjectSummary.md
 
 # IDE
@@ -167,7 +172,7 @@ chromedriver.exe
 
 # Local configuration
 .env.local
-.env.production 
+.env.production
 
 # --- Allow only essential files for production flow ---
 

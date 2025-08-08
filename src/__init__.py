@@ -17,6 +17,6 @@ except ImportError:
     pass
 
 __all__ = [
-    'AmazonJobsScraper',
-    'check_scraper_health',
-] 
+    "AmazonJobsScraper",
+    "check_scraper_health",
+]
