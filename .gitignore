@@ -135,6 +135,7 @@ scripts/
 # Development tools
 .pre-commit-config.yaml
 requirements-dev.txt
+prompt.txt
 
 # Data files (keep local only)
 data/

@@ -3,9 +3,10 @@ Data processor for Amazon Jobs Scraper
 Converts CSV data to HTML dashboard
 """
 
+import logging
 import pandas as pd
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 from typing import Optional
 
 # Import the new template function
@@ -30,12 +31,14 @@ def _generate_table_rows(df: pd.DataFrame) -> str:
         posting_date = row.get("posting_date", "")
         if posting_date and pd.notna(posting_date):
             try:
-                if isinstance(posting_date, str):
-                    posting_date = pd.to_datetime(posting_date).strftime("%Y-%m-%d")
-                else:
-                    posting_date = posting_date.strftime("%Y-%m-%d")
-            except Exception:
-                posting_date = str(posting_date)
+                # Convert to datetime object first, then format
+                # pd.to_datetime can handle various input types (str, datetime, etc.)
+                posting_date = pd.to_datetime(posting_date).strftime("%d %b, %Y")
+            except Exception as e:
+                logging.warning(f"Could not parse posting date '{posting_date}': {e}")
+                posting_date = str(
+                    posting_date
+                )  # Fallback to string representation if parsing fails
         else:
             posting_date = "N/A"
 
