@@ -1,0 +1,158 @@
+# Canonical categories and rules for inferring job_category from TheirStack jobs
+# You can tune keywords/slugs here without code changes.
+
+categories:
+  - Software Development
+  - Data Science
+  - Machine Learning Science
+  - Business Intelligence
+  - Project/Program/Product Management--Technical
+  - Operations, IT, & Support Engineering
+  - Research Science
+  - Solutions Architect
+  - Security
+  - Other
+
+rules:
+  Machine Learning Science:
+    title:
+      - machine learning
+      - ml
+      - deep learning
+      - nlp
+      - natural language
+      - computer vision
+      - cv
+      - reinforcement learning
+      - "ai "
+      - " generative ai"
+      - genai
+      - " llm"
+    tech_slugs:
+      - tensorflow
+      - pytorch
+      - scikit-learn
+      - keras
+      - huggingface
+      - xgboost
+      - lightgbm
+      - transformers
+  Data Science:
+    title:
+      - data scientist
+      - "quant "
+      - quantitative
+      - experimentation
+      - causal
+      - econometric
+      - statistician
+      - applied scientist
+    tech_slugs:
+      - statsmodels
+      - prophet
+  Business Intelligence:
+    title:
+      - business intelligence
+      - "bi "
+      - analytics engineer
+      - data analyst
+      - business analyst
+      - "analytics "
+    tech_slugs:
+      - tableau
+      - powerbi
+      - looker
+      - qlik
+      - superset
+      - mode
+      - metabase
+  Software Development:
+    title:
+      - software engineer
+      - developer
+      - sde
+      - backend
+      - front-end
+      - frontend
+      - full stack
+      - data engineer
+      - etl
+      - pipeline
+      - warehouse
+      - platform engineer
+    tech_slugs:
+      - spark
+      - kafka
+      - hadoop
+      - dbt
+      - airflow
+      - snowflake
+      - bigquery
+      - redshift
+      - databricks
+  Operations, IT, & Support Engineering:
+    title:
+      - devops
+      - sre
+      - site reliability
+      - systems engineer
+      - infrastructure
+      - platform
+      - sysadmin
+    tech_slugs:
+      - kubernetes
+      - docker
+      - terraform
+      - ansible
+      - grafana
+      - prometheus
+      - helm
+      - eks
+      - ecs
+  Solutions Architect:
+    title:
+      - solutions architect
+      - solution architect
+      - cloud architect
+    tech_slugs: []
+  Security:
+    title:
+      - security engineer
+      - application security
+      - appsec
+      - cloud security
+      - infosec
+      - security analyst
+    tech_slugs:
+      - vault
+      - snyk
+      - burp
+      - wireshark
+      - osquery
+  Research Science:
+    title:
+      - research scientist
+      - researcher
+    tech_slugs: []
+  "Project/Program/Product Management--Technical":
+    title:
+      - product manager
+      - technical product manager
+      - program manager
+      - project manager
+      - tpm
+    tech_slugs: []
+
+tie_breakers:
+  ml_over_data_science: true
+  bi_over_data_science: true
+  security_override: true
+  solutions_architect_override: true
+
+weights:
+  title: 1.0
+  normalized_title: 1.0
+  tech_slugs: 0.8
+  description: 0.4
+
+min_score: 1.0

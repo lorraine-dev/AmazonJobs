@@ -28,40 +28,71 @@ class ScraperConfig:
     def _load_config(self) -> Dict[str, Any]:
         """Load configuration from YAML file and environment variables."""
 
-        # Default configuration
+        # Default configuration using the new logical schema
         default_config = {
-            "scraper": {
-                "base_url": (
-                    "https://amazon.jobs/en/search?"
-                    "offset=0&result_limit=10&sort=relevant"
-                    "&category%5B%5D=business-intelligence"
-                    "&category%5B%5D=software-development"
-                    "&category%5B%5D=project-program-product-management-technical"
-                    "&category%5B%5D=machine-learning-science"
-                    "&category%5B%5D=data-science"
-                    "&category%5B%5D=operations-it-support-engineering"
-                    "&category%5B%5D=research-science"
-                    "&category%5B%5D=solutions-architect"
-                    "&country%5B%5D=LUX"
-                    "&distanceType=Mi&radius=24km"
-                    "&industry_experience=four_to_six_years"
-                    "&job_level%5B%5D=5"
-                    "&job_level%5B%5D=6"
-                    "&latitude=&longitude=&loc_group_id=&loc_query=&base_query=&city=&country=&region=&county=&query_options="
-                ),
-                "max_workers": 3,
-                "batch_size": 10,
-                "delays": {"min": 1, "max": 3},
+            "common": {
+                "paths": {
+                    "raw_dir": "data/raw",
+                    "backup_dir": "data/backups",
+                    "combined_file": "data/processed/combined_jobs.csv",
+                },
+                "logging": {
+                    "level": "INFO",
+                    "file": "logs/scraper.log",
+                    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+                },
             },
-            "output": {
-                "data_dir": "data/raw",
-                "backup_dir": "data/backups",
-                "filename": "amazon_luxembourg_jobs.csv",
-            },
-            "logging": {
-                "level": "INFO",
-                "file": "logs/scraper.log",
-                "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            "sources": {
+                "amazon": {
+                    "base_url": (
+                        "https://amazon.jobs/en/search?"
+                        "offset=0&result_limit=10&sort=relevant"
+                        "&category%5B%5D=business-intelligence"
+                        "&category%5B%5D=software-development"
+                        "&category%5B%5D=project-program-product-management-technical"
+                        "&category%5B%5D=machine-learning-science"
+                        "&category%5B%5D=data-science"
+                        "&category%5B%5D=operations-it-support-engineering"
+                        "&category%5B%5D=research-science"
+                        "&category%5B%5D=solutions-architect"
+                        "&country%5B%5D=LUX"
+                        "&distanceType=Mi&radius=24km"
+                        "&industry_experience=four_to_six_years"
+                        "&job_level%5B%5D=5"
+                        "&job_level%5B%5D=6"
+                        "&latitude=&longitude=&loc_group_id=&loc_query=&base_query=&city=&country=&region=&county=&query_options="
+                    ),
+                    "max_workers": 3,
+                    "batch_size": 10,
+                    "delays": {"min": 1, "max": 3},
+                    "raw_filename": "amazon_jobs.csv",
+                },
+                "theirstack": {
+                    "api_url": "https://api.theirstack.com/v1/jobs/search",
+                    "filters": {
+                        "job_title_or": [
+                            "Data scientist",
+                            "Data Architect",
+                            "Data Engineer",
+                            "Data Steward",
+                            "Machine learning",
+                            "Software",
+                            "Python",
+                            "LLM",
+                            "GenAI",
+                            "Generative AI",
+                            "ML",
+                        ],
+                        "job_country_code_or": ["LU"],
+                        "posted_at_max_age_days": 1,
+                    },
+                    "limits": {
+                        "page_size": 25,
+                        "max_jobs_per_run": 50,
+                        "max_excluded_ids": 200,
+                    },
+                    "raw_filename": "theirstack_jobs.csv",
+                },
             },
         }
 
@@ -84,14 +115,12 @@ class ScraperConfig:
         """Override configuration with environment variables."""
 
         env_mappings = {
-            "AMAZON_SCRAPER_BASE_URL": ("scraper", "base_url"),
-            "AMAZON_SCRAPER_MAX_WORKERS": ("scraper", "max_workers"),
-            "AMAZON_SCRAPER_BATCH_SIZE": ("scraper", "batch_size"),
-            "AMAZON_SCRAPER_DATA_DIR": ("output", "data_dir"),
-            "AMAZON_SCRAPER_BACKUP_DIR": ("output", "backup_dir"),
-            "AMAZON_SCRAPER_FILENAME": ("output", "filename"),
-            "AMAZON_SCRAPER_LOG_LEVEL": ("logging", "level"),
-            "AMAZON_SCRAPER_LOG_FILE": ("logging", "file"),
+            "AMAZON_SCRAPER_BASE_URL": ("sources", "amazon", "base_url"),
+            "AMAZON_SCRAPER_MAX_WORKERS": ("sources", "amazon", "max_workers"),
+            "AMAZON_SCRAPER_BATCH_SIZE": ("sources", "amazon", "batch_size"),
+            # Paths are YAML-driven; do not override via env to avoid drift
+            "AMAZON_SCRAPER_LOG_LEVEL": ("common", "logging", "level"),
+            "AMAZON_SCRAPER_LOG_FILE": ("common", "logging", "file"),
         }
 
         for env_var, config_path in env_mappings.items():
@@ -127,15 +156,43 @@ class ScraperConfig:
         Returns:
             Configuration value
         """
+        # Primary lookup
         keys = key.split(".")
         value = self._config
-
         for k in keys:
             if isinstance(value, dict) and k in value:
                 value = value[k]
             else:
+                # Backward-compatibility aliases from old schema to new schema
+                alias_map = {
+                    # Paths
+                    "output.data_dir": "common.paths.raw_dir",
+                    "output.backup_dir": "common.paths.backup_dir",
+                    "output.combined_file": "common.paths.combined_file",
+                    "output.filename": "sources.amazon.raw_filename",
+                    # Logging
+                    "logging.level": "common.logging.level",
+                    "logging.file": "common.logging.file",
+                    "logging.format": "common.logging.format",
+                    # Amazon scraper
+                    "scraper.base_url": "sources.amazon.base_url",
+                    "scraper.max_workers": "sources.amazon.max_workers",
+                    "scraper.batch_size": "sources.amazon.batch_size",
+                    "scraper.delays.min": "sources.amazon.delays.min",
+                    "scraper.delays.max": "sources.amazon.delays.max",
+                    # TheirStack
+                    "theirstack.api_url": "sources.theirstack.api_url",
+                    "theirstack.job_title_or": "sources.theirstack.filters.job_title_or",
+                    "theirstack.job_country_code_or": "sources.theirstack.filters.job_country_code_or",
+                    "theirstack.posted_at_max_age_days": "sources.theirstack.filters.posted_at_max_age_days",
+                    "theirstack.page_size": "sources.theirstack.limits.page_size",
+                    "theirstack.max_jobs_per_run": "sources.theirstack.limits.max_jobs_per_run",
+                    "theirstack.max_excluded_ids": "sources.theirstack.limits.max_excluded_ids",
+                }
+                alias_key = alias_map.get(key)
+                if alias_key and alias_key != key:
+                    return self.get(alias_key, default)
                 return default
-
         return value
 
     def get_scraper_config(self) -> Dict[str, Any]:

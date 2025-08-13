@@ -43,14 +43,35 @@ jobs:
         workflow_conclusion: success
       continue-on-error: true
 
+    - name: Download previous state
+      uses: dawidd6/action-download-artifact@v3
+      with:
+        name: job-state
+        path: .
+        workflow: scraper.yml
+        workflow_conclusion: success
+      continue-on-error: true
+
     - name: Debug downloaded files
       run: |
         echo "=== Checking downloaded files ==="
         ls -la data/raw/ || echo "data/raw/ directory not found"
         find . -name "*.csv" -type f || echo "No CSV files found"
 
+    - name: Check TheirStack secret presence
+      env:
+        THEIR_STACK_API_KEY: ${{ secrets.THEIR_STACK_API_KEY }}
+      run: |
+        if [ -z "${THEIR_STACK_API_KEY}" ]; then
+          echo "❌ THEIR_STACK_API_KEY is not set"; exit 1
+        else
+          echo "✅ TheirStack key detected (masked)"
+        fi
+
     - name: Run scraper with timeout
       id: scraper
+      env:
+        THEIR_STACK_API_KEY: ${{ secrets.THEIR_STACK_API_KEY }}
       run: |
         timeout 1800 python src/scripts/run_scraper.py  # 30 minute timeout
       continue-on-error: true
@@ -70,6 +91,24 @@ jobs:
         name: job-data
         path: data/raw/
         retention-days: 30
+
+    - name: Upload scraper state
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: job-state
+        path: theirstack_state.json
+        retention-days: 30
+        if-no-files-found: ignore
+
+    - name: Upload backups (optional)
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: job-backups
+        path: data/backups/
+        retention-days: 7
+        if-no-files-found: ignore
 
     - name: Generate dashboard
       run: |

@@ -107,7 +107,8 @@ def generate_dashboard_html_template(
             <table id="job-table">
                 <thead>
                     <tr>
-                        <th colspan="2">Role / Team</th>
+                        <th>Title</th>
+                        <th>Company</th>
                         <th>Category</th>
                         <th id="posting-date-header" class="sortable">Posted</th>
                         <th>Status</th>

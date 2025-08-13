@@ -1,5 +1,5 @@
 """
-Data processor for Amazon Jobs Scraper
+Data processor for Jobs Dashboard
 Converts CSV data to HTML dashboard
 """
 
@@ -13,6 +13,8 @@ from typing import Optional
 from .dashboard_template import generate_dashboard_html_template
 from .dashboard_visuals import create_sankey_diagram
 from .data_analytics import get_skills_by_category
+from src.scraper.config import ScraperConfig  # type: ignore
+from src.utils.paths import get_combined_file  # type: ignore
 
 
 def _generate_table_rows(df: pd.DataFrame) -> str:
@@ -36,9 +38,8 @@ def _generate_table_rows(df: pd.DataFrame) -> str:
                 posting_date = pd.to_datetime(posting_date).strftime("%d %b, %Y")
             except Exception as e:
                 logging.warning(f"Could not parse posting date '{posting_date}': {e}")
-                posting_date = str(
-                    posting_date
-                )  # Fallback to string representation if parsing fails
+                # Fallback to string representation if parsing fails
+                posting_date = str(posting_date)
         else:
             posting_date = "N/A"
 
@@ -47,15 +48,15 @@ def _generate_table_rows(df: pd.DataFrame) -> str:
         status_class = "active" if active_status else "inactive"
         status_text = "Active" if active_status else "Inactive"
 
-        # Create job URL
-        job_url = row.get("job_url", "")
+        # Create job URL (fallback to 'url' if 'job_url' missing)
+        job_url = row.get("job_url") or row.get("url") or ""
 
-        # Embed the URL into the Role text
-        role_text = row.get("role", "N/A")
+        # Display the job TITLE (not role/seniority) for all sources
+        link_text = row.get("title") or row.get("role", "N/A")
         role_link = (
-            f'<a href="{job_url}" target="_blank" class="job-url">{role_text}</a>'
+            f'<a href="{job_url}" target="_blank" class="job-url">{link_text}</a>'
             if job_url
-            else role_text
+            else link_text
         )
 
         # Extract description and qualifications, handling potential NaN
@@ -92,7 +93,7 @@ def _generate_table_rows(df: pd.DataFrame) -> str:
                         <p>{pref_qual}</p>
                     </div>
                 </td>
-                <td>{row.get('team', 'N/A')}</td>
+                <td>{row.get('company', 'N/A')}</td>
                 <td>{row.get('job_category', 'N/A')}</td>
                 <td>{posting_date}</td>
                 <td class="{status_class}">{status_text}</td>
@@ -246,35 +247,56 @@ def create_error_html(message: str) -> str:
 
 def process_latest_data():
     """
-    Process the latest CSV data and generate dashboard.
+    Process the latest combined jobs data and generate dashboard.
     This is the main function to be called by the scraper.
     """
+    # Path to the unified jobs file (YAML-configured)
+    cfg = ScraperConfig()
+    combined_jobs_file = get_combined_file(cfg)
 
-    # Find the latest CSV file
-    data_dir = Path("data/raw")
-    csv_files = list(data_dir.glob("*.csv"))
+    if not combined_jobs_file.exists():
+        error_msg = f"❌ Combined jobs file not found: {combined_jobs_file}"
+        print(error_msg)
 
-    if not csv_files:
-        print("❌ No CSV files found in data/raw/")
+        # Create an error dashboard
+        docs_dir = Path("docs")
+        docs_dir.mkdir(exist_ok=True)
+        error_html = create_error_html(error_msg)
+
+        with open(docs_dir / "index.html", "w", encoding="utf-8") as f:
+            f.write(error_html)
+
         return None
 
-    # Get the most recent CSV file
-    latest_csv = max(csv_files, key=lambda x: x.stat().st_mtime)
-    print(f"📊 Processing latest data: {latest_csv}")
+    print(f"📊 Processing combined jobs data: {combined_jobs_file}")
 
-    # Generate dashboard
-    html_content = csv_to_html_table(str(latest_csv))
+    try:
+        # Generate dashboard from the combined jobs file
+        html_content = csv_to_html_table(str(combined_jobs_file))
 
-    # Save to docs directory for GitHub Pages
-    docs_dir = Path("docs")
-    docs_dir.mkdir(exist_ok=True)
+        # Save to docs directory for GitHub Pages
+        docs_dir = Path("docs")
+        docs_dir.mkdir(exist_ok=True)
 
-    output_path = docs_dir / "index.html"
-    with open(output_path, "w", encoding="utf-8") as f:
-        f.write(html_content)
+        output_path = docs_dir / "index.html"
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(html_content)
 
-    print(f"✅ Dashboard generated: {output_path}")
-    return str(output_path)
+        print(f"✅ Dashboard generated: {output_path}")
+        return str(output_path)
+
+    except Exception as e:
+        error_msg = f"❌ Error generating dashboard: {str(e)}"
+        print(error_msg)
+
+        # Create an error dashboard
+        docs_dir = Path("docs")
+        error_html = create_error_html(error_msg)
+
+        with open(docs_dir / "index.html", "w", encoding="utf-8") as f:
+            f.write(error_html)
+
+        return None
 
 
 if __name__ == "__main__":

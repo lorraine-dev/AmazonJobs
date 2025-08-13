@@ -100,9 +100,14 @@ def create_sankey_diagram(df: pd.DataFrame, as_html: bool = False):
     team_counts = df_active.groupby("team").size()
     role_counts = df_active.groupby("role").size()
 
-    all_counts = pd.concat([category_counts, team_counts, role_counts])
-    all_nodes["count"] = all_nodes["name"].map(all_counts)
-    all_nodes["count"] = all_nodes["count"].fillna(0).astype(int)
+    # Concatenating may produce duplicate index labels (e.g., same name across levels)
+    # Aggregate by index to ensure uniqueness, then map via dict to avoid reindexing issues
+    all_counts = (
+        pd.concat([category_counts, team_counts, role_counts]).groupby(level=0).sum()
+    )
+    all_nodes["count"] = (
+        all_nodes["name"].map(all_counts.to_dict()).fillna(0).astype(int)
+    )
 
     node_labels = [
         f"{name} - {count}" for name, count in all_nodes[["name", "count"]].values

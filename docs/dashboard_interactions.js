@@ -20,11 +20,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         rows.forEach(row => {
             const roleText = row.children[0].querySelector('.summary-content').textContent.toLowerCase();
-            const teamText = row.children[1].textContent.toLowerCase();
+            const companyText = row.children[1].textContent.toLowerCase();
             const categoryText = row.children[2].textContent;
             const statusText = row.children[4].textContent;
 
-            const matchesSearch = searchTerm === '' || roleText.includes(searchTerm) || teamText.includes(searchTerm);
+            const matchesSearch = searchTerm === '' || roleText.includes(searchTerm) || companyText.includes(searchTerm);
             const matchesCategory = selectedCategory === '' || categoryText === selectedCategory;
             const matchesStatus = selectedStatus === '' || statusText === selectedStatus;
 
@@ -65,9 +65,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function sortTable() {
         console.log('sortTable function called!');
         const header = postingDateHeader;
-        // The actual column index for the 'Posted' date in the <td> elements is 3.
-        // The <th> index is 2, but the first <th> has a colspan of 2, shifting the <td> indices.
-        const columnIndex = 3; // Hardcode to 3 for the 'Posted' date column
+        // The actual column index for the 'Posted' date in the <td> elements is 3 now.
+        const columnIndex = 3;
 
         const currentRows = Array.from(tbody.querySelectorAll('tr.job-row:not(.hidden)'))
 
@@ -120,6 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const detailsContainer = targetRow.querySelector('.details-container');
             if (detailsContainer) {
                 detailsContainer.classList.toggle('hidden');
-            }n        }
+            }
+        }
     });
 });

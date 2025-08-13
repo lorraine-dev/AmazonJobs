@@ -8,6 +8,8 @@ import os
 import pandas as pd
 from datetime import datetime, timedelta
 import sys
+from src.scraper.config import ScraperConfig  # type: ignore
+from src.utils.paths import get_raw_path  # type: ignore
 
 
 def check_scraper_health():
@@ -16,11 +18,12 @@ def check_scraper_health():
     print("🔍 Amazon Jobs Scraper Health Check")
     print("=" * 50)
 
-    # Check if data file exists and is recent
-    data_file = "data/raw/amazon_luxembourg_jobs.csv"
+    # Check if data file exists and is recent (centralized via config)
+    cfg = ScraperConfig()
+    data_file = str(get_raw_path("amazon", cfg))
     if not os.path.exists(data_file):
         print("❌ Data file not found")
-        print("   Expected: data/raw/amazon_luxembourg_jobs.csv")
+        print(f"   Expected: {data_file}")
         return False
 
     # Check file modification time

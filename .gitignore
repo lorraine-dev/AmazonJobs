@@ -104,6 +104,7 @@ ENV/
 env.bak/
 venv.bak/
 az_jobs/
+theirstack_state.json
 
 # Spyder project settings
 .spyderproject
@@ -131,6 +132,7 @@ tests/
 examples/
 deployment/
 scripts/
+docs/reference/*
 
 # Development tools
 .pre-commit-config.yaml
@@ -146,6 +148,7 @@ backups/
 INTERNAL_NOTES.md
 PROJECT_OPTIMIZATION.md
 ProjectSummary.md
+
 
 # IDE
 .vscode/
@@ -206,4 +209,8 @@ chromedriver.exe
 
 # Optionally: allow the latest raw data file (remove if you want zero data in repo)
 !data/raw/
-!data/raw/amazon_luxembourg_jobs.csv
+!data/raw/amazon_jobs.csv
+
+#Allow access to windsurf:
+# !notebooks/development/TheirStackJobs.ipynb
+# !ProjectSummary.md

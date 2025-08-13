@@ -8,15 +8,10 @@ __version__ = "1.0.0"
 __author__ = "Amazon Jobs Scraper Team"
 __description__ = "A robust web scraper for Amazon job listings"
 
-# Import main components
-try:
-    from .scraper.amazon_scraper import AmazonJobsScraper
-    from .utils.health_check import check_scraper_health
-except ImportError:
-    # Allow import even if dependencies aren't installed
-    pass
+# Avoid importing submodules here to prevent import issues
+# Individual modules should handle their own imports
 
-__all__ = [
-    "AmazonJobsScraper",
-    "check_scraper_health",
+__all__: list[str] = [
+    # "AmazonJobsScraper",
+    # "check_scraper_health",
 ]

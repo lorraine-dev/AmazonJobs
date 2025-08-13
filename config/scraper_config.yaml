@@ -1,17 +1,84 @@
-scraper:
-  base_url: "https://amazon.jobs/en/search?offset=0&result_limit=10&sort=relevant&category%5B%5D=business-intelligence&category%5B%5D=software-development&category%5B%5D=project-program-product-management-technical&category%5B%5D=machine-learning-science&category%5B%5D=data-science&category%5B%5D=operations-it-support-engineering&category%5B%5D=research-science&category%5B%5D=solutions-architect&country%5B%5D=LUX&distanceType=Mi&radius=24km&industry_experience=four_to_six_years&job_level%5B%5D=5&job_level%5B%5D=6&latitude=&longitude=&loc_group_id=&loc_query=&base_query=&city=&country=&region=&county=&query_options="
-  max_workers: 3
-  batch_size: 10
-  delays:
-    min: 1
-    max: 3
+common:
+  paths:
+    raw_dir: "data/raw"
+    backup_dir: "data/backups"
+    combined_file: "data/processed/combined_jobs.csv"
+  logging:
+    level: "INFO"
+    file: "logs/scraper.log"
+    format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
-output:
-  data_dir: "data/raw"
-  backup_dir: "data/backups"
-  filename: "amazon_luxembourg_jobs.csv"
+sources:
+  amazon:
+    enabled: true
+    base_url: "https://amazon.jobs/en/search?offset=0&result_limit=10&sort=relevant&category%5B%5D=business-intelligence&category%5B%5D=software-development&category%5B%5D=project-program-product-management-technical&category%5B%5D=machine-learning-science&category%5B%5D=data-science&category%5B%5D=operations-it-support-engineering&category%5B%5D=research-science&category%5B%5D=solutions-architect&country%5B%5D=LUX&distanceType=Mi&radius=24km&industry_experience=four_to_six_years&job_level%5B%5D=5&job_level%5B%5D=6&latitude=&longitude=&loc_group_id=&loc_query=&base_query=&city=&country=&region=&county=&query_options="
+    max_workers: 3
+    batch_size: 10
+    delays:
+      min: 1
+      max: 3
+    raw_filename: "amazon_jobs.csv"
 
-logging:
-  level: "INFO"
-  file: "logs/scraper.log"
-  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s" 
+  theirstack:
+    enabled: true
+    api_url: "https://api.theirstack.com/v1/jobs/search"
+    filters:
+      job_title_or:
+        - "Data scientist"
+        - "Data Architect"
+        - "Data Engineer"
+        - "Data Steward"
+        - "Machine learning"
+        - "Software"
+        - "Python"
+        - "LLM"
+        - "GenAI"
+        - "Generative AI"
+        - "ML"
+        - "Artificial Intelligence"
+        - "AI Engineer"
+        - "AI Scientist"
+        - "Applied Scientist"
+        - "Research Scientist"
+        - "Research Engineer"
+        - "ML Engineer"
+        - "MLOps"
+        - "Analytics Engineer"
+        - "Data Analyst"
+        - "Deep Learning"
+        - "NLP"
+        - "Natural Language Processing"
+        - "Computer Vision"
+        - "Recommender"
+        - "Recommendation"
+        - "Information Retrieval"
+        - "Reinforcement Learning"
+        - "Large Language Model"
+        - "Big Data"
+        - "Data Platform"
+        - "Data Pipeline"
+        - "ETL"
+        - "ELT"
+        - "Data Warehouse"
+        - "Data Warehousing"
+        - "DWH"
+        - "Data Lake"
+        - "Lakehouse"
+        - "Spark"
+        - "PySpark"
+        - "Databricks"
+        - "Airflow"
+        - "Kafka"
+        - "Flink"
+        - "Streaming"
+        - "Real-time"
+        - "Snowflake"
+        - "Redshift"
+      job_country_code_or:
+        - "LU"
+      posted_at_max_age_days: 1
+    limits:
+      page_size: 25
+      max_jobs_per_run: 50
+      max_excluded_ids: 200
+    raw_filename: "theirstack_jobs.csv"

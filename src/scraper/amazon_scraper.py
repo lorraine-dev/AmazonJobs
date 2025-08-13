@@ -21,6 +21,11 @@ import re
 from typing import Dict, List, Optional, Tuple, Any
 
 from .config import ScraperConfig
+from src.utils.paths import (
+    get_raw_dir,
+    get_backup_dir,
+    get_raw_path,
+)  # type: ignore
 
 
 class AmazonJobsScraper:
@@ -55,8 +60,8 @@ class AmazonJobsScraper:
     def _setup_directories(self):
         """Create necessary directories."""
         directories = [
-            self.config.get("output.data_dir", "data/raw"),
-            self.config.get("output.backup_dir", "data/backups"),
+            get_raw_dir(self.config),
+            get_backup_dir(self.config),
             "logs",
         ]
 
@@ -73,10 +78,14 @@ class AmazonJobsScraper:
             Configured Chrome WebDriver instance
         """
         user_agents = [
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+            "Mozilla/5.0 (X11; Linux x86_64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) "
+            "Gecko/20100101 Firefox/89.0",
         ]
 
         chrome_options = Options()
@@ -86,10 +95,13 @@ class AmazonJobsScraper:
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--disable-plugins")
         chrome_options.add_argument("--disable-images")
-        # chrome_options.add_argument("--disable-javascript")  # Disable JavaScript to avoid false positives
+        # Disable JavaScript to avoid false positives
+        # chrome_options.add_argument("--disable-javascript")
         chrome_options.add_argument("--disable-css")
         chrome_options.add_argument("--window-size=1920,1080")
-        chrome_options.add_argument(f"--user-agent={random.choice(user_agents)}")
+        chrome_options.add_argument(
+            f"--user-agent={random.choice(user_agents)}"  # nosec B311
+        )
 
         # Performance preferences
         prefs = {
@@ -236,7 +248,7 @@ class AmazonJobsScraper:
 
         try:
             # Add random delay before each request (1-3 seconds)
-            time.sleep(random.uniform(1, 3))
+            time.sleep(random.uniform(1, 3))  # nosec B311
 
             # Navigate to job detail page
             driver.get(job_url)
@@ -317,16 +329,20 @@ class AmazonJobsScraper:
         Returns:
             DataFrame containing existing jobs
         """
-        csv_path = os.path.join(
-            self.config.get("output.data_dir", "data/raw"),
-            self.config.get("output.filename", "amazon_luxembourg_jobs.csv"),
-        )
+        csv_path = str(get_raw_path("amazon", self.config))
 
         if os.path.exists(csv_path):
             try:
-                df = pd.read_csv(csv_path)
-                self.logger.info(f"Loaded {len(df)} existing jobs from {csv_path}")
-                return df
+                existing_jobs_df = pd.read_csv(csv_path)
+                # Backward compatibility: add new columns if missing
+                if "company" not in existing_jobs_df.columns:
+                    existing_jobs_df["company"] = "Amazon"
+                if "source" not in existing_jobs_df.columns:
+                    existing_jobs_df["source"] = "Amazon"
+                self.logger.info(
+                    f"Loaded {len(existing_jobs_df)} existing jobs from {csv_path}"
+                )
+                return existing_jobs_df
             except Exception as e:
                 self.logger.error(f"Error loading existing jobs: {e}")
                 return pd.DataFrame()
@@ -406,16 +422,17 @@ class AmazonJobsScraper:
             job_info, driver = args
             try:
                 # Random delay between workers
-                time.sleep(random.uniform(0, 2))
+                time.sleep(random.uniform(0, 2))  # nosec B311
 
                 job_details = self.scrape_job_details_selenium_improved(
                     driver, job_info["job_url"]
                 )
 
                 # Combine basic info with detailed info
-                return {
+                job_data = {
                     "id": job_info["job_id"],
                     "title": job_info["title"],
+                    "company": "Amazon",  # Fixed company name
                     "role": job_info["role"],
                     "team": job_info["team"],
                     "job_url": job_info["job_url"],
@@ -425,7 +442,9 @@ class AmazonJobsScraper:
                     "pref_qual": job_details["pref_qual"],
                     "job_category": job_details["job_category"],
                     "active": job_details["active"],
+                    "source": "Amazon",  # Add source column
                 }
+                return job_data
             except Exception as e:
                 self.logger.error(
                     f"Error in worker for job {job_info.get('job_id', 'unknown')}: {e}"
@@ -448,48 +467,54 @@ class AmazonJobsScraper:
                 driver_index = j % max_workers
                 job_driver_pairs.append((job_info, driver_pool[driver_index]))
 
-            with concurrent.futures.ThreadPoolExecutor(
-                max_workers=max_workers
-            ) as executor:
-                batch_results = list(executor.map(scrape_job_worker, job_driver_pairs))
+            try:
+                with concurrent.futures.ThreadPoolExecutor(
+                    max_workers=max_workers
+                ) as executor:
+                    batch_results = list(
+                        executor.map(scrape_job_worker, job_driver_pairs)
+                    )
 
-            # Filter out None results
-            batch_results = [r for r in batch_results if r is not None]
-            all_results.extend(batch_results)
+                # Filter out None results
+                batch_results = [r for r in batch_results if r is not None]
+                all_results.extend(batch_results)
 
-            # Delay between batches
-            if i + batch_size < len(job_links_list):
-                time.sleep(random.uniform(2, 5))
+                # Delay between batches
+                if i + batch_size < len(job_links_list):
+                    time.sleep(random.uniform(2, 5))  # nosec B311
+
+            except Exception as e:
+                self.logger.error(f"Error in parallel execution: {e}")
+
+            finally:
+                # Cleanup resources if needed
+                pass
 
         # Clean up driver pool
         self.logger.info("Cleaning up driver pool...")
         for driver in driver_pool:
             try:
                 driver.quit()
-            except Exception:
-                pass
+            except Exception as e:
+                self.logger.debug(f"Error quitting driver: {e}")
 
         self.logger.info(f"Successfully scraped {len(all_results)} jobs")
         return all_results
 
     def create_backup(self):
         """Create a backup of the current data file."""
-        source_file = os.path.join(
-            self.config.get("output.data_dir", "data/raw"),
-            self.config.get("output.filename", "amazon_luxembourg_jobs.csv"),
-        )
+        source_path = get_raw_path("amazon", self.config)
 
-        if os.path.exists(source_file):
+        if source_path.exists():
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            backup_file = os.path.join(
-                self.config.get("output.backup_dir", "data/backups"),
-                f"amazon_jobs_backup_{timestamp}.csv",
+            backup_file = (
+                get_backup_dir(self.config) / f"amazon_jobs_backup_{timestamp}.csv"
             )
 
             try:
                 import shutil
 
-                shutil.copy2(source_file, backup_file)
+                shutil.copy2(source_path, backup_file)
                 self.logger.info(f"Backup created: {backup_file}")
             except Exception as e:
                 self.logger.error(f"Error creating backup: {e}")
@@ -525,7 +550,7 @@ class AmazonJobsScraper:
                 # Navigate to initial page
                 self.logger.info("Loading initial page...")
                 self.driver.get(self.config.get("scraper.base_url"))
-                time.sleep(random.uniform(2, 4))
+                time.sleep(random.uniform(2, 4))  # nosec B311
 
                 # Check for blocking
                 if self.check_for_blocking(self.driver):
@@ -545,126 +570,125 @@ class AmazonJobsScraper:
                                 (By.CLASS_NAME, "job-tile")
                             )
                         )
-                        self.logger.info(
-                            f"Found {len(job_tiles)} job tiles on page {page}"
+                    except Exception as e:
+                        self.logger.error(
+                            f"Error finding job tiles on page {page}: {e}"
                         )
+                        break
 
-                        if len(job_tiles) == 0:
-                            break
+                    self.logger.info(f"Found {len(job_tiles)} job tiles on page {page}")
 
-                        page_job_links = []
+                    if len(job_tiles) == 0:
+                        break
 
-                        for i, tile in enumerate(job_tiles):
-                            try:
-                                # Extract job ID
-                                job_id = tile.get_attribute("data-job-id")
-                                if not job_id:
-                                    try:
-                                        job_id_elem = tile.find_element(
-                                            By.CSS_SELECTOR, "[data-job-id]"
-                                        )
-                                        job_id = job_id_elem.get_attribute(
-                                            "data-job-id"
-                                        )
-                                    except Exception:
-                                        continue
+                    page_job_links = []
 
-                                # Track seen jobs
-                                self.seen_job_ids.add(job_id)
-
-                                # Skip existing jobs
-                                if job_id in existing_job_ids:
-                                    self.logger.debug(
-                                        f"Skipping existing job ID: {job_id}"
+                    for i, tile in enumerate(job_tiles):
+                        try:
+                            # Extract job ID
+                            job_id = tile.get_attribute("data-job-id")
+                            if not job_id:
+                                try:
+                                    job_id_elem = tile.find_element(
+                                        By.CSS_SELECTOR, "[data-job-id]"
                                     )
+                                    job_id = job_id_elem.get_attribute("data-job-id")
+                                except Exception as e:
+                                    self.logger.debug(f"Error extracting job ID: {e}")
                                     continue
 
-                                # Extract job information
-                                title = ""
-                                try:
-                                    title_elem = tile.find_element(
-                                        By.CSS_SELECTOR, "h3, h2, a"
-                                    )
-                                    title = title_elem.text.strip()
-                                except Exception:
-                                    title = tile.text.strip()[:100]
+                            # Track seen jobs
+                            self.seen_job_ids.add(job_id)
 
-                                job_url = ""
-                                try:
-                                    job_link = tile.find_element(
-                                        By.CSS_SELECTOR, "a[href*='/jobs/']"
-                                    )
-                                    job_url = job_link.get_attribute("href") or ""
-                                except Exception:
-                                    job_url = f"https://amazon.jobs/en/jobs/{job_id}"
-
-                                posting_date = None
-                                try:
-                                    posting_date_elem = tile.find_element(
-                                        By.CSS_SELECTOR, "h2.posting-date"
-                                    )
-                                    posting_date_text = posting_date_elem.text.strip()
-                                    posting_date = self.parse_posting_date(
-                                        posting_date_text
-                                    )
-                                except Exception:
-                                    pass
-
-                                role, team = self.extract_role_and_team(title)
-
-                                page_job_links.append(
-                                    {
-                                        "job_id": job_id,
-                                        "title": title,
-                                        "role": role,
-                                        "team": team,
-                                        "job_url": job_url,
-                                        "posting_date": posting_date,
-                                    }
-                                )
-
-                                self.logger.debug(f"Found job {i+1}: {title}")
-
-                            except Exception as e:
-                                self.logger.error(f"Error extracting job {i+1}: {e}")
+                            # Skip existing jobs
+                            if job_id in existing_job_ids:
+                                self.logger.debug(f"Skipping existing job ID: {job_id}")
                                 continue
 
-                        # Add to main collection
-                        for job_info in page_job_links:
-                            self.all_job_links.add(
-                                (
-                                    job_info["job_id"],
-                                    job_info["title"],
-                                    job_info["role"],
-                                    job_info["team"],
-                                    job_info["job_url"],
-                                    job_info["posting_date"],
+                            # Extract job information
+                            title = ""
+                            try:
+                                title_elem = tile.find_element(
+                                    By.CSS_SELECTOR, "h3, h2, a"
                                 )
+                                title = title_elem.text.strip()
+                            except Exception:
+                                title = tile.text.strip()[:100]
+
+                            job_url = ""
+                            try:
+                                job_link = tile.find_element(
+                                    By.CSS_SELECTOR, "a[href*='/jobs/']"
+                                )
+                                job_url = job_link.get_attribute("href") or ""
+                            except Exception:
+                                job_url = f"https://amazon.jobs/en/jobs/{job_id}"
+
+                            posting_date = None
+                            try:
+                                posting_date_elem = tile.find_element(
+                                    By.CSS_SELECTOR, "h2.posting-date"
+                                )
+                                posting_date_text = posting_date_elem.text.strip()
+                                posting_date = self.parse_posting_date(
+                                    posting_date_text
+                                )
+                            except Exception as e:
+                                self.logger.debug(f"Error extracting posting date: {e}")
+                                pass
+
+                            role, team = self.extract_role_and_team(title)
+
+                            page_job_links.append(
+                                {
+                                    "job_id": job_id,
+                                    "title": title,
+                                    "role": role,
+                                    "team": team,
+                                    "job_url": job_url,
+                                    "posting_date": posting_date,
+                                }
                             )
 
-                        self.logger.debug(
-                            f"Added {len(page_job_links)} job links from page {page}"
+                            self.logger.debug(f"Found job {i+1}: {title}")
+
+                        except Exception as e:
+                            self.logger.error(f"Error extracting job {i+1}: {e}")
+                            continue
+
+                    # Add to main collection
+                    for job_info in page_job_links:
+                        self.all_job_links.add(
+                            (
+                                job_info["job_id"],
+                                job_info["title"],
+                                job_info["role"],
+                                job_info["team"],
+                                job_info["job_url"],
+                                job_info["posting_date"],
+                            )
                         )
 
-                        # Navigate to next page
-                        try:
-                            next_button = self.driver.find_element(  # type: ignore
-                                By.XPATH, "//button[@aria-label='Next page']"
-                            )
+                    self.logger.debug(
+                        f"Added {len(page_job_links)} job links from page {page}"
+                    )
 
-                            if "disabled" in (next_button.get_attribute("class") or ""):
-                                break
+                    # Navigate to next page
+                    try:
+                        next_button = self.driver.find_element(  # type: ignore
+                            By.XPATH, "//button[@aria-label='Next page']"
+                        )
 
-                            self.driver.execute_script(  # type: ignore
-                                "arguments[0].scrollIntoView();", next_button
-                            )
-                            time.sleep(0.5)
-                            next_button.click()
-                            time.sleep(2)
-                            page += 1
-
-                        except Exception:
+                        if "disabled" in (next_button.get_attribute("class") or ""):
                             break
+
+                        self.driver.execute_script(  # type: ignore
+                            "arguments[0].scrollIntoView();", next_button
+                        )
+                        time.sleep(0.5)
+                        next_button.click()
+                        time.sleep(2)
+                        page += 1
 
                     except Exception as e:
                         self.logger.error(f"Error on page {page}: {e}")
@@ -679,24 +703,25 @@ class AmazonJobsScraper:
 
                 # Handle case where no new jobs were found
                 if len(self.all_job_links) == 0:
-                    self.logger.info("No new jobs found - updating active status")
+                    self.logger.info(
+                        "No new Amazon jobs; updating active flags (seen_on_site=%d)",
+                        len(self.seen_job_ids),
+                    )
                     if not existing_df.empty:
                         for idx, row in existing_df.iterrows():
                             job_id = str(row["id"])
                             existing_df.at[idx, "active"] = job_id in self.seen_job_ids
 
                         active_count = existing_df["active"].sum()
-                        self.logger.debug(
-                            f"Updated active status: {active_count} active jobs, {len(existing_df) - active_count} inactive jobs"
+                        self.logger.info(
+                            "Active summary: active=%d inactive=%d total=%d",
+                            active_count,
+                            len(existing_df) - active_count,
+                            len(existing_df),
                         )
 
                     # Save updated data
-                    output_path = os.path.join(
-                        self.config.get("output.data_dir", "data/raw"),
-                        self.config.get(
-                            "output.filename", "amazon_luxembourg_jobs.csv"
-                        ),
-                    )
+                    output_path = get_raw_path("amazon", self.config)
                     existing_df.to_csv(output_path, index=False)
                     self.logger.debug(f"Updated data saved to {output_path}")
                     return existing_df
@@ -730,12 +755,13 @@ class AmazonJobsScraper:
                 else:
                     final_df = new_df
 
-                # Save results
-                output_path = os.path.join(
-                    self.config.get("output.data_dir", "data/raw"),
-                    self.config.get("output.filename", "amazon_luxembourg_jobs.csv"),
-                )
-                final_df.to_csv(output_path, index=False)
+                # Save results to raw CSV via centralized storage
+                from src.utils.raw_storage import save_raw_jobs
+
+                records = final_df.to_dict("records")
+                saved_path = save_raw_jobs("amazon", records, self.config)
+                if saved_path:
+                    self.logger.info(f"✅ Saved raw Amazon data to {saved_path}")
 
                 # Log summary
                 execution_time = time.time() - start_time
@@ -746,13 +772,18 @@ class AmazonJobsScraper:
                     f"Inactive jobs: {len(final_df) - final_df['active'].sum()}"
                 )
                 self.logger.info(f"Execution time: {execution_time:.2f} seconds")
-                self.logger.info(f"Results saved to: {output_path}")
+
+                # Raw save completed
+                self.logger.info("✅ Raw save completed")
 
                 return final_df
 
             finally:
                 if self.driver:
-                    self.driver.quit()
+                    try:
+                        self.driver.quit()
+                    except Exception as e:
+                        self.logger.debug(f"Error quitting driver: {e}")
 
         except Exception as e:
             self.logger.error(f"Fatal error in main execution: {e}")
@@ -765,4 +796,7 @@ class AmazonJobsScraper:
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Context manager exit."""
         if self.driver:
-            self.driver.quit()
+            try:
+                self.driver.quit()
+            except Exception as e:
+                self.logger.debug(f"Error quitting driver: {e}")
