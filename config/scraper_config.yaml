@@ -48,7 +48,6 @@ sources:
         - "Deep Learning"
         - "NLP"
         - "Natural Language Processing"
-        - "Computer Vision"
         - "Recommender"
         - "Recommendation"
         - "Information Retrieval"
@@ -76,7 +75,7 @@ sources:
         - "Redshift"
       job_country_code_or:
         - "LU"
-      posted_at_max_age_days: 1
+      posted_at_max_age_days: 5
     limits:
       page_size: 25
       max_jobs_per_run: 50
