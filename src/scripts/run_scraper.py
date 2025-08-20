@@ -124,6 +124,13 @@ def main():
         action="store_true",
         help="Skip dashboard generation after scraping",
     )
+    parser.add_argument(
+        "--amazon-engine",
+        type=str,
+        choices=["selenium", "api"],
+        default=None,
+        help="Override Amazon scraper engine (selenium|api). Defaults to config or AMAZON_ENGINE env.",
+    )
     args = parser.parse_args()
 
     # Load environment variables from .env for local runs
@@ -139,6 +146,13 @@ def main():
             "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         ),
     )
+
+    # Apply CLI engine override if provided
+    if args.amazon_engine:
+        config.update("sources.amazon.engine", args.amazon_engine)
+        logging.getLogger(__name__).info(
+            f"Amazon engine overridden via CLI: {args.amazon_engine}"
+        )
 
     # Initialize monitoring
     metrics_tracker = ScraperMetrics()

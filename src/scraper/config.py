@@ -44,6 +44,7 @@ class ScraperConfig:
             },
             "sources": {
                 "amazon": {
+                    "engine": "selenium",
                     "base_url": (
                         "https://amazon.jobs/en/search?"
                         "offset=0&result_limit=10&sort=relevant"
@@ -66,6 +67,7 @@ class ScraperConfig:
                     "batch_size": 10,
                     "delays": {"min": 1, "max": 3},
                     "raw_filename": "amazon_jobs.csv",
+                    "api": {"save_page_json": True},
                 },
                 "theirstack": {
                     "api_url": "https://api.theirstack.com/v1/jobs/search",
@@ -118,6 +120,7 @@ class ScraperConfig:
             "AMAZON_SCRAPER_BASE_URL": ("sources", "amazon", "base_url"),
             "AMAZON_SCRAPER_MAX_WORKERS": ("sources", "amazon", "max_workers"),
             "AMAZON_SCRAPER_BATCH_SIZE": ("sources", "amazon", "batch_size"),
+            "AMAZON_ENGINE": ("sources", "amazon", "engine"),
             # Paths are YAML-driven; do not override via env to avoid drift
             "AMAZON_SCRAPER_LOG_LEVEL": ("common", "logging", "level"),
             "AMAZON_SCRAPER_LOG_FILE": ("common", "logging", "file"),

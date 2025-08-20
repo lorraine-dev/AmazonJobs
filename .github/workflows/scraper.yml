@@ -76,6 +76,16 @@ jobs:
         timeout 1800 python src/scripts/run_scraper.py  # 30 minute timeout
       continue-on-error: true
 
+    - name: Print scraper log tail
+      if: always()
+      run: |
+        echo "=== Tail logs/scraper.log (if present) ==="
+        if [ -f logs/scraper.log ]; then
+          tail -n 200 logs/scraper.log || true
+        else
+          echo "logs/scraper.log not found"
+        fi
+
     - name: Check scraper success
       run: |
         if [ "${{ steps.scraper.outcome }}" == "success" ]; then
@@ -86,11 +96,21 @@ jobs:
         fi
 
     - name: Upload job data
+      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: job-data
         path: data/raw/
         retention-days: 30
+
+    - name: Upload scraper logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: logs
+        path: logs/
+        retention-days: 14
+        if-no-files-found: ignore
 
     - name: Upload scraper state
       if: always()

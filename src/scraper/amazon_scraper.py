@@ -544,6 +544,35 @@ class AmazonJobsScraper:
             self.all_job_links = set()
             self.seen_job_ids = set()
 
+            # Engine selection: allow API mode to bypass Selenium entirely
+            engine = (
+                os.getenv("AMAZON_ENGINE")
+                or self.config.get("sources.amazon.engine", "selenium")
+            ).lower()
+            if engine == "api":
+                self.logger.info(
+                    "Using Amazon API engine (delegating to AmazonAPIScraper)"
+                )
+                try:
+                    # Prefer absolute import path used elsewhere in repo
+                    from src.scraper.amazon_api_scraper import AmazonAPIScraper  # type: ignore
+                except Exception:  # pragma: no cover - fallback for module resolution
+                    from .amazon_api_scraper import AmazonAPIScraper  # type: ignore
+
+                out_csv_path = get_raw_path("amazon", self.config)
+                api = AmazonAPIScraper(self.config)
+                save_page_json = bool(
+                    self.config.get("sources.amazon.api.save_page_json", True)
+                )
+                # Use headers file by default; do not pass URL so API scraper
+                # reads docs/reference/Amazon/request_headers.txt and sanitizes it
+                df = api.run(
+                    out_csv=out_csv_path,
+                    no_cookie=True,
+                    save_raw=save_page_json,
+                )
+                return df
+
             try:
                 self.driver = self.setup_driver_fast()
 

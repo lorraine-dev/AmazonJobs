@@ -85,6 +85,14 @@ class TheirStackScraper:
         page_size = int(self.config.get("theirstack.page_size"))
         max_jobs_per_run = int(self.config.get("theirstack.max_jobs_per_run"))
         max_excluded_ids = int(self.config.get("theirstack.max_excluded_ids"))
+        # Log current state snapshot
+        self.logger.info(
+            "State snapshot before request: last_run_date=%s, seen_ids=%d, page_size=%d, max_jobs_per_run=%d",
+            self.state.get_last_run_date(),
+            len(self.state.scraped_job_ids),
+            page_size,
+            max_jobs_per_run,
+        )
         # Calculate the date for the last run
         last_run_date = self.state.get_last_run_date()
         if last_run_date:
@@ -118,13 +126,18 @@ class TheirStackScraper:
             "job_id_not": seen_ids,
         }
         try:
+            # Log a concise snapshot of the pre-check payload (avoid overly verbose logs)
+            seen_preview = ", ".join(seen_ids[:10]) if seen_ids else ""
+            titles_preview = ", ".join(title_filters[:5]) if title_filters else ""
             self.logger.info(
-                "Sending pre-check: posted_at_gte=%s countries=%s titles=%d max_age_days=%d exclude_ids=%d",
+                "Sending pre-check: posted_at_gte=%s countries=%s titles=%d[%s] max_age_days=%d exclude_ids=%d[%s]",
                 posted_at_gte,
                 ",".join(country_codes),
                 len(title_filters),
+                titles_preview,
                 max_age_days,
                 len(seen_ids),
+                seen_preview,
             )
             response = requests.post(
                 self.api_url,
@@ -142,7 +155,39 @@ class TheirStackScraper:
             )
             self.logger.info("Pre-check total_results=%d", total_jobs)
             if total_jobs == 0:
-                self.logger.info("No new jobs via pre-check; skipping full request.")
+                self.logger.info(
+                    "No new jobs via pre-check; skipping full request. (posted_at_gte=%s, max_age_days=%d, exclude_ids=%d)",
+                    posted_at_gte,
+                    max_age_days,
+                    len(seen_ids),
+                )
+                # Debug: run a wide pre-check over the full max_age_days window to verify if older jobs exist
+                try:
+                    wide_gte = (
+                        datetime.utcnow() - timedelta(days=max_age_days)
+                    ).strftime("%Y-%m-%d")
+                    wide_payload = dict(check_payload)
+                    wide_payload.update({"posted_at_gte": wide_gte})
+                    wresp = requests.post(
+                        self.api_url,
+                        json=wide_payload,
+                        headers=self.headers,
+                        timeout=10,
+                    )
+                    wresp.raise_for_status()
+                    wdata = wresp.json()
+                    self._save_response_backup("precheck_wide", wdata, wide_payload)
+                    wmeta = wdata.get("metadata") or wdata.get("meta") or {}
+                    wtotal = int(
+                        (wmeta.get("total_results") or wmeta.get("total") or 0) or 0
+                    )
+                    self.logger.info(
+                        "Wide pre-check total_results=%d (posted_at_gte=%s). This is a debug-only check; fetch still skipped.",
+                        wtotal,
+                        wide_gte,
+                    )
+                except Exception as we:
+                    self.logger.warning("Wide pre-check failed: %s", we)
                 return []
         except Exception as e:
             self.logger.error(f"Pre-check request failed: {e}")
@@ -199,12 +244,17 @@ class TheirStackScraper:
                 page_new_jobs = [
                     job for job in jobs if self.state.is_job_new(str(job["id"]))
                 ]
+                try:
+                    id_preview = ", ".join(str(j["id"]) for j in jobs[:5])
+                except Exception:
+                    id_preview = ""
                 self.logger.info(
-                    "Page %d results=%d new=%d dup=%d",
+                    "Page %d results=%d new=%d dup=%d ids=[%s]",
                     page,
                     len(jobs),
                     len(page_new_jobs),
                     len(jobs) - len(page_new_jobs),
+                    id_preview,
                 )
 
                 collected_jobs.extend(page_new_jobs)

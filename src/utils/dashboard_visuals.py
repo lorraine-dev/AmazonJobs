@@ -19,7 +19,14 @@ def create_sankey_diagram(df: pd.DataFrame, as_html: bool = False):
     Returns:
         A Plotly Figure object or an HTML string of the figure.
     """
-    df_active = df[df["active"]].copy()
+    # Ensure we have a clean boolean mask with no NaNs. If 'active' is missing,
+    # treat all rows as active to avoid masking errors.
+    if "active" in df.columns:
+        # Use pandas nullable boolean to avoid FutureWarning on fillna downcasting
+        mask = df["active"].astype("boolean").fillna(True).astype(bool)
+        df_active = df[mask].copy()
+    else:
+        df_active = df.copy()
 
     if df_active.empty:
         if as_html:
