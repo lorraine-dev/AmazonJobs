@@ -564,9 +564,11 @@ class AmazonJobsScraper:
                 save_page_json = bool(
                     self.config.get("sources.amazon.api.save_page_json", True)
                 )
-                # Use headers file by default; do not pass URL so API scraper
-                # reads docs/reference/Amazon/request_headers.txt and sanitizes it
+                # Use configured base_url to avoid requiring a headers file in CI.
+                # AmazonAPIScraper will convert /search? to /search.json? and set safe headers.
+                base_url = self.config.get("sources.amazon.base_url")
                 df = api.run(
+                    url=base_url,
                     out_csv=out_csv_path,
                     no_cookie=True,
                     save_raw=save_page_json,
