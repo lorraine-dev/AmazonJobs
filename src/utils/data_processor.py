@@ -17,6 +17,32 @@ from src.scraper.config import ScraperConfig  # type: ignore
 from src.utils.paths import get_combined_file  # type: ignore
 
 
+def _coerce_active_column(series: pd.Series) -> pd.Series:
+    """Coerce assorted truthy/falsey/empty values to boolean. Defaults to True when ambiguous/missing."""
+    if series is None:
+        return pd.Series([True])  # fallback, should not happen
+    mapped = (
+        series.astype(str)
+        .str.strip()
+        .str.lower()
+        .map(
+            {
+                "true": True,
+                "t": True,
+                "1": True,
+                "yes": True,
+                "y": True,
+                "false": False,
+                "f": False,
+                "0": False,
+                "no": False,
+                "n": False,
+            }
+        )
+    )
+    return mapped.fillna(True).astype(bool)
+
+
 def _generate_table_rows(df: pd.DataFrame) -> str:
     """
     Generates the HTML table rows from the DataFrame.
@@ -43,7 +69,7 @@ def _generate_table_rows(df: pd.DataFrame) -> str:
         else:
             posting_date = "N/A"
 
-        # Format active status
+        # Format active status (df['active'] should already be coerced to boolean)
         active_status = row.get("active", True)
         status_class = "active" if active_status else "inactive"
         status_text = "Active" if active_status else "Inactive"
@@ -114,8 +140,14 @@ def create_dashboard_html(df: pd.DataFrame) -> str:
     Returns:
         Complete HTML string for the dashboard.
     """
+    # Normalize active column for accurate counts and rendering
+    if "active" in df.columns:
+        df["active"] = _coerce_active_column(df["active"])
+    else:
+        df["active"] = True
+
     total_jobs = len(df)
-    active_jobs = df["active"].sum() if "active" in df.columns else 0
+    active_jobs = int(df["active"].astype(bool).sum())
     last_updated = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     # Get unique values for filters from the DataFrame
@@ -178,6 +210,12 @@ def csv_to_html_table(csv_path: str, output_path: Optional[str] = None) -> str:
     except Exception as e:
         print(f"❌ Error reading CSV: {e}")
         return create_error_html("Could not load job data")
+
+    # Coerce 'active' after load to ensure correct dtypes
+    if "active" in df.columns:
+        df["active"] = _coerce_active_column(df["active"])
+    else:
+        df["active"] = True
 
     # Create HTML table
     html_content = create_dashboard_html(df)

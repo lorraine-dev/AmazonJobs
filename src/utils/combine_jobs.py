@@ -97,6 +97,33 @@ def combine_job_files(
             if "job_category" not in df.columns and "category" in df.columns:
                 df = df.rename(columns={"category": "job_category"})
 
+            # Ensure 'active' exists and is boolean; default to True if missing/empty
+            if "active" not in df.columns:
+                df["active"] = True
+            else:
+                # Coerce common truthy/falsey representations; treat NaN/empty as True (currently scraped jobs)
+                coerced = (
+                    df["active"]
+                    .astype(str)
+                    .str.strip()
+                    .str.lower()
+                    .map(
+                        {
+                            "true": True,
+                            "t": True,
+                            "1": True,
+                            "yes": True,
+                            "y": True,
+                            "false": False,
+                            "f": False,
+                            "0": False,
+                            "no": False,
+                            "n": False,
+                        }
+                    )
+                )
+                df["active"] = coerced.fillna(True)
+
             # Ensure required columns exist
             if "source" not in df.columns:
                 # Infer source from filename as last resort
@@ -143,10 +170,35 @@ def combine_job_files(
     # Add any missing columns with empty values
     for col in columns:
         if col not in combined_df.columns:
-            combined_df[col] = ""
+            combined_df[col] = True if col == "active" else ""
 
     # Reorder columns
     combined_df = combined_df[columns]
+
+    # Final safety: ensure 'active' is boolean dtype
+    if "active" in combined_df.columns:
+        combined_df["active"] = (
+            combined_df["active"]
+            .astype(str)
+            .str.strip()
+            .str.lower()
+            .map(
+                {
+                    "true": True,
+                    "t": True,
+                    "1": True,
+                    "yes": True,
+                    "y": True,
+                    "false": False,
+                    "f": False,
+                    "0": False,
+                    "no": False,
+                    "n": False,
+                }
+            )
+            .fillna(True)
+            .astype(bool)
+        )
 
     # Determine configured combined file path
     cfg = ScraperConfig()

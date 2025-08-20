@@ -12,7 +12,7 @@ sources:
   amazon:
     enabled: true
     engine: "api"
-    base_url: "https://amazon.jobs/en/search?offset=0&result_limit=10&sort=relevant&category%5B%5D=business-intelligence&category%5B%5D=software-development&category%5B%5D=project-program-product-management-technical&category%5B%5D=machine-learning-science&category%5B%5D=data-science&category%5B%5D=operations-it-support-engineering&category%5B%5D=research-science&category%5B%5D=solutions-architect&country%5B%5D=LUX&distanceType=Mi&radius=24km&industry_experience=four_to_six_years&job_level%5B%5D=5&job_level%5B%5D=6&latitude=&longitude=&loc_group_id=&loc_query=&base_query=&city=&country=&region=&county=&query_options="
+    base_url: "https://www.amazon.jobs/en/search.json?offset=0&result_limit=10&sort=relevant&category%5B%5D=business-intelligence&category%5B%5D=software-development&category%5B%5D=project-program-product-management-technical&category%5B%5D=machine-learning-science&category%5B%5D=data-science&category%5B%5D=operations-it-support-engineering&category%5B%5D=research-science&category%5B%5D=solutions-architect&normalized_country_code%5B%5D=LUX&job_level%5B%5D=5&job_level%5B%5D=6"
     max_workers: 3
     batch_size: 10
     delays:

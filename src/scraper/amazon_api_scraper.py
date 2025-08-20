@@ -40,6 +40,55 @@ class RequestSpec:
     headers: Dict[str, str]
 
 
+def merge_with_active_flags(
+    existing_df: pd.DataFrame,
+    new_df: pd.DataFrame,
+    seen_ids: Set[str],
+    logger: logging.Logger,
+) -> pd.DataFrame:
+    """Merge existing and new API results and set 'active' based on seen_ids.
+
+    Mirrors Selenium scraper behavior where any job id present in the current crawl
+    is marked active=True; jobs missing from the current crawl are marked active=False.
+    """
+    # Normalize id to string for consistent comparisons
+    if not new_df.empty:
+        new_df = new_df.copy()
+        new_df["id"] = new_df["id"].astype(str)
+
+    if existing_df is None or existing_df.empty:
+        # First run or no prior data: mark only currently-seen ids as active
+        if not new_df.empty:
+            new_df["active"] = new_df["id"].astype(str).isin(seen_ids)
+            new_df["active"] = new_df["active"].astype(bool)
+        logger.info("Merged data (no existing): %d total jobs", len(new_df))
+        return new_df
+
+    # Ensure existing ids are strings
+    existing_df = existing_df.copy()
+    if "id" in existing_df.columns:
+        existing_df["id"] = existing_df["id"].astype(str)
+
+    combined = pd.concat([existing_df, new_df], ignore_index=True)
+    # Keep the most recent row per id
+    combined = combined.drop_duplicates(subset=["id"], keep="last").reset_index(
+        drop=True
+    )
+
+    # Set active=True only for ids seen in this crawl
+    combined["active"] = combined["id"].astype(str).isin(seen_ids)
+    combined["active"] = combined["active"].astype(bool)
+
+    active_count = int(combined["active"].sum()) if not combined.empty else 0
+    logger.info(
+        "Updated active status: active=%d inactive=%d total=%d",
+        active_count,
+        len(combined) - active_count,
+        len(combined),
+    )
+    return combined
+
+
 def parse_headers_file(path: Path) -> RequestSpec:
     """Parse a plain-text headers dump file to extract URL and headers.
 
@@ -206,34 +255,60 @@ def fetch_page(spec: RequestSpec, offset: int, timeout: int = 30) -> Dict[str, A
 def flatten_jobs(jobs: List[Dict[str, Any]]) -> pd.DataFrame:
     rows: List[Dict[str, Any]] = []
     for j in jobs:
-        rows.append(
-            {
-                # core
-                "id": j.get("id"),
-                "title": j.get("title"),
-                "company": j.get("company_name"),
-                "city": j.get("city"),
-                "country_code": j.get("country_code"),
-                "normalized_location": j.get("normalized_location"),
-                "location": j.get("location"),
-                "job_category": j.get("job_category"),
-                "job_schedule_type": j.get("job_schedule_type"),
-                "is_manager": j.get("is_manager"),
-                "is_intern": j.get("is_intern"),
-                "posted_date": j.get("posted_date"),
-                "job_path": j.get("job_path"),
-                "job_url": (
-                    f"https://amazon.jobs{j.get('job_path')}"
-                    if j.get("job_path")
-                    else None
-                ),
-                "source": "AmazonAPI",
-            }
-        )
+        api_uuid = j.get("id")
+        job_path = j.get("job_path")
+        # Prefer numeric id from id_icims when present; else parse from job_path; else use API UUID
+        id_icims = j.get("id_icims")
+        numeric_from_path: Optional[str] = None
+        if isinstance(job_path, str):
+            m = re.search(r"/jobs/(\d+)", job_path)
+            if m:
+                numeric_from_path = m.group(1)
+
+        # Extract optional nested fields
+        team_label: Optional[str] = None
+        team_val = j.get("team")
+        if isinstance(team_val, dict):
+            team_label = team_val.get("label")
+
+        # Compose row with rich fields; preserve HTML from API for descriptions/quals
+        row: Dict[str, Any] = {
+            "id": id_icims
+            or numeric_from_path
+            or (str(api_uuid) if api_uuid is not None else None),
+            "api_id": api_uuid,
+            "title": j.get("title"),
+            "role": j.get("title"),
+            "company": j.get("company_name"),
+            "city": j.get("city"),
+            "country_code": j.get("country_code"),
+            "normalized_location": j.get("normalized_location"),
+            "location": j.get("location"),
+            "job_category": j.get("job_category"),
+            "job_schedule_type": j.get("job_schedule_type"),
+            "is_manager": j.get("is_manager"),
+            "is_intern": j.get("is_intern"),
+            "posted_date": j.get("posted_date"),
+            "posting_date": j.get(
+                "posted_date"
+            ),  # duplicate for downstream compatibility
+            "description": j.get("description"),
+            "description_short": j.get("description_short"),
+            "basic_qual": j.get("basic_qualifications"),
+            "pref_qual": j.get("preferred_qualifications"),
+            "team": team_label,
+            "job_path": job_path,
+            "job_url": (f"https://amazon.jobs{job_path}" if job_path else None),
+            "apply_url": j.get("url_next_step"),
+            "source": "AmazonAPI",
+        }
+        rows.append(row)
     df = pd.DataFrame(rows)
     # Ensure consistent types
     if not df.empty:
         df["id"] = df["id"].astype(str)
+        if "api_id" in df.columns:
+            df["api_id"] = df["api_id"].astype(str)
         df["source"] = "AmazonAPI"
     return df
 
@@ -315,10 +390,23 @@ class AmazonAPIScraper:
         self.logger.info(f"Total hits reported: {hits}")
 
         all_jobs = list(first.get("jobs") or [])
-        # Track duplicates across pages
-        seen_ids: Set[str] = set(str(j.get("id")) for j in all_jobs)
+
+        # Track duplicates across pages using numeric job id from job_path; fallback to API UUID
+        def _job_key(j: Dict[str, Any]) -> Optional[str]:
+            id_icims = j.get("id_icims")
+            if id_icims is not None:
+                return str(id_icims)
+            jp = j.get("job_path")
+            if isinstance(jp, str):
+                m = re.search(r"/jobs/(\d+)", jp)
+                if m:
+                    return m.group(1)
+            api_uuid = j.get("id")
+            return str(api_uuid) if api_uuid is not None else None
+
+        seen_ids: Set[str] = set(k for k in (_job_key(j) for j in all_jobs) if k)
         self.logger.info(
-            "First page jobs=%d unique_ids=%d",
+            "First page jobs=%d unique_job_ids=%d",
             len(all_jobs),
             len(seen_ids),
         )
@@ -332,10 +420,13 @@ class AmazonAPIScraper:
             )
 
         # Determine number of pages
-        pages = (hits + result_limit - 1) // result_limit if hits else 1
+        total_pages = (hits + result_limit - 1) // result_limit if hits else 1
+        pages = total_pages
         if max_pages is not None:
-            pages = min(pages, max_pages)
-        self.logger.info(f"Planned pages to fetch: {pages}")
+            pages = min(total_pages, max_pages)
+        self.logger.info(
+            f"Planned pages to fetch: {pages} (total available: {total_pages})"
+        )
 
         # Fetch remaining pages
         offset = result_limit
@@ -355,13 +446,14 @@ class AmazonAPIScraper:
                 self.logger.info("No jobs returned; stopping early.")
                 break
 
-            # Per-page metrics and duplicate tracking
-            new_ids = [str(j.get("id")) for j in jobs]
+            # Per-page metrics and duplicate tracking (by numeric job id when available)
+            new_ids = [_job_key(j) for j in jobs]
             dup_in_page = sum(1 for _id in new_ids if _id in seen_ids)
             for _id in new_ids:
-                seen_ids.add(_id)
+                if _id:
+                    seen_ids.add(_id)
             self.logger.info(
-                "Page %d: jobs=%d dups=%d cumulative_unique=%d",
+                "Page %d: jobs=%d dups=%d cumulative_unique_job_ids=%d",
                 page_idx + 1,
                 len(jobs),
                 dup_in_page,
@@ -372,21 +464,58 @@ class AmazonAPIScraper:
             page_idx += 1
 
         self.logger.info(f"Total jobs collected (rows): {len(all_jobs)}")
-        self.logger.info(f"Total unique IDs collected: {len(seen_ids)}")
+        self.logger.info(f"Total unique job ids collected: {len(seen_ids)}")
         if hits and len(seen_ids) != hits:
-            self.logger.warning(
-                "Hits mismatch: API hits=%d but collected unique ids=%d (total rows=%d)",
-                hits,
-                len(seen_ids),
-                len(all_jobs),
+            if max_pages is not None and pages < total_pages:
+                self.logger.info(
+                    "Partial fetch limited by --max-pages=%s: API hits=%d, collected unique job ids=%d (total rows=%d)",
+                    max_pages,
+                    hits,
+                    len(seen_ids),
+                    len(all_jobs),
+                )
+            else:
+                self.logger.warning(
+                    "Hits mismatch: API hits=%d but collected unique job ids=%d (total rows=%d)",
+                    hits,
+                    len(seen_ids),
+                    len(all_jobs),
+                )
+        df_new = flatten_jobs(all_jobs)
+        # Deduplicate by job id to ensure unique listings among new rows
+        if not df_new.empty:
+            before = len(df_new)
+            df_new = df_new.drop_duplicates(subset=["id"], keep="first").reset_index(
+                drop=True
             )
-        df = flatten_jobs(all_jobs)
+            after = len(df_new)
+            if after < before:
+                self.logger.info(
+                    "Dropped %d duplicate rows by id (kept %d unique)",
+                    before - after,
+                    after,
+                )
+
+        # Merge with existing raw CSV (if present) and set active based on seen_ids
+        out_path = out_csv or get_raw_path("amazon_api", self.config)
+        existing_df: pd.DataFrame = pd.DataFrame()
+        try:
+            if out_path.exists():
+                existing_df = pd.read_csv(out_path)
+                self.logger.info(
+                    "Loaded existing raw CSV for merge: %s (%d rows)",
+                    out_path,
+                    len(existing_df),
+                )
+        except Exception as e:
+            self.logger.warning("Failed to load existing raw CSV %s: %s", out_path, e)
+
+        final_df = merge_with_active_flags(existing_df, df_new, seen_ids, self.logger)
 
         # Write CSV
-        out_path = out_csv or get_raw_path("amazon_api", self.config)
-        df.to_csv(out_path, index=False)
-        self.logger.info(f"Wrote CSV: {out_path} ({len(df)} rows)")
-        return df
+        final_df.to_csv(out_path, index=False)
+        self.logger.info(f"Wrote CSV: {out_path} ({len(final_df)} rows)")
+        return final_df
 
 
 def _build_arg_parser():
@@ -437,6 +566,11 @@ def _build_arg_parser():
 
 
 if __name__ == "__main__":
+    # Basic console logging so info-level messages appear when run as a script
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    )
     args = _build_arg_parser().parse_args()
     scraper = AmazonAPIScraper()
     scraper.run(
