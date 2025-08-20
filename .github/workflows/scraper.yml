@@ -43,6 +43,10 @@ jobs:
         workflow_conclusion: success
       continue-on-error: true
 
+    - name: Cleanup legacy raw files
+      run: |
+        rm -f data/raw/amazon_luxembourg_jobs.csv || true
+
     - name: Download previous state
       uses: dawidd6/action-download-artifact@v3
       with:
