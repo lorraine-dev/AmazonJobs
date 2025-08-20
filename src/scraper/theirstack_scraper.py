@@ -168,6 +168,10 @@ class TheirStackScraper:
             "blur_company_data": True,
             "include_total_results": True,
             "job_id_not": seen_ids,
+            # Request newest jobs first to reduce paging
+            "order_by": [{"desc": True, "field": "date_posted"}],
+            # Prefer ATS/clean URLs to reduce low-signal rows
+            "property_exists_or": ["final_url"],
         }
         try:
             # Log a concise snapshot of the pre-check payload (avoid overly verbose logs)
@@ -255,7 +259,7 @@ class TheirStackScraper:
                         )
 
                         collected_jobs: List[Dict] = []
-                        page = 1
+                        page = 0
                         pages_wide = 0
                         while len(collected_jobs) < target_to_fetch:
                             remaining = target_to_fetch - len(collected_jobs)
@@ -268,6 +272,9 @@ class TheirStackScraper:
                                 "limit": current_limit,
                                 "page": page,
                                 "job_id_not": seen_ids,
+                                # Request newest-first and trim to higher-signal rows
+                                "order_by": [{"desc": True, "field": "date_posted"}],
+                                "property_exists_or": ["final_url"],
                             }
                             try:
                                 self.logger.info(
@@ -289,6 +296,22 @@ class TheirStackScraper:
                                 self._save_response_backup(
                                     "page_wide", data, payload, page=page
                                 )
+
+                                # If API indicates truncation due to credits, stop early
+                                wmeta_obj = (
+                                    data.get("metadata") or data.get("meta") or {}
+                                )
+                                wtrunc = int(wmeta_obj.get("truncated_results") or 0)
+                                wtrunc_companies = int(
+                                    wmeta_obj.get("truncated_companies") or 0
+                                )
+                                if wtrunc or wtrunc_companies:
+                                    self.logger.warning(
+                                        "[wide] API truncation: results=%d companies=%d; stopping.",
+                                        wtrunc,
+                                        wtrunc_companies,
+                                    )
+                                    break
 
                                 jobs = data.get("data", [])
                                 if not jobs:
@@ -372,7 +395,7 @@ class TheirStackScraper:
 
         # Now make the paid, paginated requests
         collected_jobs: List[Dict] = []
-        page = 1
+        page = 0
         pages_paid = 0
         while len(collected_jobs) < target_to_fetch:
             remaining = target_to_fetch - len(collected_jobs)
@@ -386,6 +409,9 @@ class TheirStackScraper:
                 "page": page,
                 # Reduce paid duplicates as an extra safeguard
                 "job_id_not": seen_ids,
+                # Request newest-first and trim to higher-signal rows
+                "order_by": [{"desc": True, "field": "date_posted"}],
+                "property_exists_or": ["final_url"],
             }
             try:
                 self.logger.info(
@@ -406,6 +432,18 @@ class TheirStackScraper:
                 data = response.json()
                 # Persist paginated response for offline analysis
                 self._save_response_backup("page", data, payload, page=page)
+
+                # If API indicates truncation due to credits, stop early
+                meta_obj = data.get("metadata") or data.get("meta") or {}
+                trunc = int(meta_obj.get("truncated_results") or 0)
+                trunc_companies = int(meta_obj.get("truncated_companies") or 0)
+                if trunc or trunc_companies:
+                    self.logger.warning(
+                        "API truncation: results=%d companies=%d; stopping.",
+                        trunc,
+                        trunc_companies,
+                    )
+                    break
 
                 # Extract page results
                 jobs = data.get("data", [])

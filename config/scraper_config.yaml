@@ -87,7 +87,7 @@ sources:
         - "LU"
       posted_at_max_age_days: 5
     limits:
-      page_size: 25
+      page_size: 50
       max_jobs_per_run: 50
       max_excluded_ids: 200
     raw_filename: "theirstack_jobs.csv"
