@@ -42,6 +42,44 @@ class TheirStackScraper:
         self.backup_dir: Path = get_backup_dir(self.config)
         self.backup_dir.mkdir(parents=True, exist_ok=True)
 
+    def _load_external_titles(self) -> List[str]:
+        """Load additional job titles from config/theirstack_titles.json if present.
+
+        The JSON is expected to be an object whose values are arrays of strings
+        (grouped by category). We flatten values and return a simple list.
+        """
+        try:
+            titles_path = Path("config/theirstack_titles.json")
+            if titles_path.exists():
+                with open(titles_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                if isinstance(data, dict):
+                    merged: List[str] = []
+                    for v in data.values():
+                        if isinstance(v, list):
+                            merged.extend([str(x) for x in v])
+                    return merged
+                if isinstance(data, list):  # fallback if a flat list is provided
+                    return [str(x) for x in data]
+        except Exception as e:  # pragma: no cover - defensive only
+            self.logger.warning("Failed to load external titles: %s", e)
+        return []
+
+    @staticmethod
+    def _merge_titles(base: List[str], extra: List[str]) -> List[str]:
+        """Merge two title lists, deduping case-insensitively while preserving order.
+
+        Returns a new list.
+        """
+        seen = set()
+        out: List[str] = []
+        for title in list(base) + list(extra):
+            key = title.strip().lower()
+            if key and key not in seen:
+                seen.add(key)
+                out.append(title)
+        return out
+
     def _save_response_backup(
         self,
         kind: str,
@@ -107,8 +145,14 @@ class TheirStackScraper:
         if max_excluded_ids and len(seen_ids) > max_excluded_ids:
             seen_ids = seen_ids[:max_excluded_ids]
 
-        # Build title filters and max age window from YAML
+        # Build title filters and max age window from YAML, then merge external list if present
         title_filters = self.config.get("theirstack.job_title_or") or []
+        try:
+            external_titles = self._load_external_titles()
+            if external_titles:
+                title_filters = self._merge_titles(title_filters, external_titles)
+        except Exception as e:  # pragma: no cover - defensive only
+            self.logger.warning("Title merge failed: %s", e)
         max_age_days = int(self.config.get("theirstack.posted_at_max_age_days"))
         country_codes = self.config.get(
             "theirstack.job_country_code_or", ["LU"]
@@ -182,10 +226,115 @@ class TheirStackScraper:
                         (wmeta.get("total_results") or wmeta.get("total") or 0) or 0
                     )
                     self.logger.info(
-                        "Wide pre-check total_results=%d (posted_at_gte=%s). This is a debug-only check; fetch still skipped.",
+                        "Wide pre-check total_results=%d (posted_at_gte=%s).",
                         wtotal,
                         wide_gte,
                     )
+
+                    # Option A: If wide pre-check finds results, do a limited paid fetch from the wide window
+                    wide_cap = self.config.get("theirstack.wide_fetch_limit")
+                    try:
+                        wide_fetch_limit = int(wide_cap) if wide_cap is not None else 10
+                    except Exception:
+                        wide_fetch_limit = 10
+
+                    if wtotal > 0 and wide_fetch_limit > 0:
+                        target_to_fetch = min(wtotal, wide_fetch_limit)
+                        self.logger.info(
+                            "Proceeding with limited wide fetch: cap=%d from posted_at_gte=%s",
+                            target_to_fetch,
+                            wide_gte,
+                        )
+
+                        collected_jobs: List[Dict] = []
+                        page = 1
+                        while len(collected_jobs) < target_to_fetch:
+                            remaining = target_to_fetch - len(collected_jobs)
+                            current_limit = min(page_size, remaining)
+                            payload = {
+                                "posted_at_gte": wide_gte,
+                                "job_country_code_or": country_codes,
+                                "posted_at_max_age_days": max_age_days,
+                                "job_title_or": title_filters,
+                                "limit": current_limit,
+                                "page": page,
+                                "job_id_not": seen_ids,
+                            }
+                            try:
+                                self.logger.info(
+                                    "[wide] Sending request page=%d limit=%d posted_at_gte=%s titles=%d exclude_ids=%d",
+                                    page,
+                                    current_limit,
+                                    wide_gte,
+                                    len(title_filters),
+                                    len(seen_ids),
+                                )
+                                response = requests.post(
+                                    self.api_url,
+                                    json=payload,
+                                    headers=self.headers,
+                                    timeout=15,
+                                )
+                                response.raise_for_status()
+                                data = response.json()
+                                self._save_response_backup(
+                                    "page_wide", data, payload, page=page
+                                )
+
+                                jobs = data.get("data", [])
+                                if not jobs:
+                                    self.logger.info(
+                                        "[wide] No more jobs returned; stopping pagination at page %d.",
+                                        page,
+                                    )
+                                    break
+
+                                page_new_jobs = [
+                                    job
+                                    for job in jobs
+                                    if self.state.is_job_new(str(job["id"]))
+                                ]
+                                try:
+                                    id_preview = ", ".join(
+                                        str(j["id"]) for j in jobs[:5]
+                                    )
+                                except Exception:
+                                    id_preview = ""
+                                self.logger.info(
+                                    "[wide] Page %d results=%d new=%d dup=%d ids=[%s]",
+                                    page,
+                                    len(jobs),
+                                    len(page_new_jobs),
+                                    len(jobs) - len(page_new_jobs),
+                                    id_preview,
+                                )
+
+                                collected_jobs.extend(page_new_jobs)
+                                if len(jobs) < current_limit:
+                                    self.logger.info(
+                                        "[wide] Last page reached at page %d (returned=%d < limit=%d).",
+                                        page,
+                                        len(jobs),
+                                        current_limit,
+                                    )
+                                    break
+                                page += 1
+                            except Exception as fe:
+                                self.logger.error("[wide] Error fetching jobs: %s", fe)
+                                break
+
+                        # Persist state and process
+                        for job in collected_jobs:
+                            self.state.add_job_id(str(job["id"]))
+                        self.state.update_last_run()
+                        self.state.save_state()
+
+                        from src.scraper.theirstack_processor import (
+                            process_theirstack_jobs,
+                        )
+
+                        process_theirstack_jobs(collected_jobs)
+                        return collected_jobs
                 except Exception as we:
                     self.logger.warning("Wide pre-check failed: %s", we)
                 return []
