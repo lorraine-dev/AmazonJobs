@@ -1,5 +1,5 @@
 """
-HTML template for the Amazon Jobs dashboard.
+HTML template for the Jobs dashboard.
 Separated from data_processor.py for better modularity.
 """
 
@@ -59,14 +59,14 @@ def generate_dashboard_html_template(
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Amazon Jobs Dashboard</title>
+    <title>Jobs Dashboard</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="skills.css">
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>Amazon Jobs Dashboard</h1>
+            <h1>Jobs Dashboard</h1>
             <p>Personal job monitoring dashboard</p>
         </div>
 
@@ -138,7 +138,7 @@ def generate_dashboard_html_template(
         </div>
         <div class="footer">
             <p>Last updated: {last_updated}</p>
-            <p>Data source: Amazon Jobs Luxembourg</p>
+            <p>Data sources: Amazon, TheirStack</p>
         </div>
     </div>
 

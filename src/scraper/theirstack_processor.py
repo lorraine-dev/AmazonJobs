@@ -4,6 +4,7 @@ import logging
 from src.scraper.config import ScraperConfig  # type: ignore
 from src.utils.raw_storage import save_raw_jobs  # type: ignore
 from src.utils.category_mapper import infer_job_category  # type: ignore
+from src.utils.description_parser import parse_job_description  # type: ignore
 
 # Set up logging
 logging.basicConfig(
@@ -28,6 +29,8 @@ def _map_theirstack_to_our_format(job: Dict) -> Dict:
     role = title  # Dashboard displays 'role' as the primary title text
     team = company or "External"
     job_category = infer_job_category(job)
+    description = job.get("description", "")
+    parsed = parse_job_description(description)
 
     return {
         "id": str(job.get("id", "")),
@@ -36,13 +39,21 @@ def _map_theirstack_to_our_format(job: Dict) -> Dict:
         "location": job.get("location", ""),
         "posting_date": job.get("date_posted", ""),
         "url": url,
-        "description": job.get("description", ""),
+        "description": description,
         "skills": ", ".join(job.get("technology_slugs", [])),
         "active": True,
         "job_category": job_category,
         "team": team,
         "role": role,
         "source": "TheirStack",
+        # Parsed fields for richer dashboard analysis
+        "about": parsed.get("about", ""),
+        "responsibilities": "\n".join(parsed.get("responsibilities", []) or []),
+        "basic_qualifications": "\n".join(parsed.get("basic_qualifications", []) or []),
+        "preferred_qualifications": "\n".join(
+            parsed.get("preferred_qualifications", []) or []
+        ),
+        "benefits": "\n".join(parsed.get("benefits", []) or []),
     }
 
 
@@ -78,6 +89,12 @@ def process_theirstack_jobs(jobs: List[Dict]) -> pd.DataFrame:
         "team",
         "role",
         "source",
+        # New structured fields parsed from description
+        "about",
+        "responsibilities",
+        "basic_qualifications",
+        "preferred_qualifications",
+        "benefits",
     ]
     df = pd.DataFrame(processed_jobs)
 
