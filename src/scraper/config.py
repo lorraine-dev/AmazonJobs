@@ -65,6 +65,7 @@ class ScraperConfig:
                 },
                 "theirstack": {
                     "api_url": "https://api.theirstack.com/v1/jobs/search",
+                    "english_only": True,
                     "filters": {
                         "job_title_or": [
                             "Data scientist",
@@ -200,6 +201,7 @@ class ScraperConfig:
                     "theirstack.page_size": "sources.theirstack.limits.page_size",
                     "theirstack.max_jobs_per_run": "sources.theirstack.limits.max_jobs_per_run",
                     "theirstack.max_excluded_ids": "sources.theirstack.limits.max_excluded_ids",
+                    "theirstack.english_only": "sources.theirstack.english_only",
                 }
                 alias_key = alias_map.get(key)
                 if alias_key and alias_key != key:

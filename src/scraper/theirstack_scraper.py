@@ -10,6 +10,7 @@ import json
 from src.utils.theirstack_state import TheirStackState  # type: ignore
 from src.scraper.config import ScraperConfig  # type: ignore
 from src.utils.paths import get_backup_dir  # type: ignore
+from src.utils.text_lang import job_is_english  # type: ignore
 
 load_dotenv()
 
@@ -157,6 +158,7 @@ class TheirStackScraper:
         country_codes = self.config.get(
             "theirstack.job_country_code_or", ["LU"]
         )  # default LU
+        english_only = bool(self.config.get("theirstack.english_only"))
 
         # First, make a free request to check if there are any unseen jobs
         check_payload = {
@@ -326,6 +328,16 @@ class TheirStackScraper:
                                     for job in jobs
                                     if self.state.is_job_new(str(job["id"]))
                                 ]
+                                if english_only:
+                                    before_cnt = len(page_new_jobs)
+                                    page_new_jobs = [
+                                        j for j in page_new_jobs if job_is_english(j)
+                                    ]
+                                    self.logger.info(
+                                        "[wide] English filter kept %d/%d",
+                                        len(page_new_jobs),
+                                        before_cnt,
+                                    )
                                 try:
                                     id_preview = ", ".join(
                                         str(j["id"]) for j in jobs[:5]
@@ -457,6 +469,12 @@ class TheirStackScraper:
                 page_new_jobs = [
                     job for job in jobs if self.state.is_job_new(str(job["id"]))
                 ]
+                if english_only:
+                    before_cnt = len(page_new_jobs)
+                    page_new_jobs = [j for j in page_new_jobs if job_is_english(j)]
+                    self.logger.info(
+                        "English filter kept %d/%d", len(page_new_jobs), before_cnt
+                    )
                 try:
                     id_preview = ", ".join(str(j["id"]) for j in jobs[:5])
                 except Exception:

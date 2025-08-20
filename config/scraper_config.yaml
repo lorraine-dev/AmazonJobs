@@ -32,6 +32,7 @@ sources:
   theirstack:
     enabled: true
     api_url: "https://api.theirstack.com/v1/jobs/search"
+    english_only: true
     filters:
       job_title_or:
         - "Data scientist"
