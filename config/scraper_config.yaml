@@ -13,14 +13,21 @@ sources:
     enabled: true
     engine: "api"
     base_url: "https://www.amazon.jobs/en/search.json?offset=0&result_limit=10&sort=relevant&category%5B%5D=business-intelligence&category%5B%5D=software-development&category%5B%5D=project-program-product-management-technical&category%5B%5D=machine-learning-science&category%5B%5D=data-science&category%5B%5D=operations-it-support-engineering&category%5B%5D=research-science&category%5B%5D=solutions-architect&normalized_country_code%5B%5D=LUX&job_level%5B%5D=5&job_level%5B%5D=6"
+    html_base_url: "https://www.amazon.jobs/en/search?offset=0&result_limit=10&sort=relevant&category%5B%5D=business-intelligence&category%5B%5D=software-development&category%5B%5D=project-program-product-management-technical&category%5B%5D=machine-learning-science&category%5B%5D=data-science&category%5B%5D=operations-it-support-engineering&category%5B%5D=research-science&category%5B%5D=solutions-architect&country%5B%5D=LUX&job_level%5B%5D=5&job_level%5B%5D=6"
     max_workers: 3
     batch_size: 10
+    headless: true
+    refresh_existing: false
     delays:
       min: 1
       max: 3
     raw_filename: "amazon_jobs.csv"
     api:
       save_page_json: false
+    limits:
+      max_pages: 25
+      max_jobs: 300
+      max_runtime_seconds: 0
 
   theirstack:
     enabled: true

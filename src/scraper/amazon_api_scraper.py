@@ -337,6 +337,7 @@ class AmazonAPIScraper:
         save_raw: bool = True,
         timeout: int = 30,
         no_cookie: bool = False,
+        write_output: bool = True,
     ) -> pd.DataFrame:
         """Run the API scraper.
 
@@ -346,6 +347,7 @@ class AmazonAPIScraper:
             max_pages: limit pages for smoke testing
             save_raw: save each page JSON under data/raw/amazon_api_raw/
             timeout: request timeout seconds
+            write_output: when False, skip writing the final CSV (useful for hybrid mode)
         """
         # Establish URL and headers
         spec: Optional[RequestSpec] = None
@@ -512,9 +514,12 @@ class AmazonAPIScraper:
 
         final_df = merge_with_active_flags(existing_df, df_new, seen_ids, self.logger)
 
-        # Write CSV
-        final_df.to_csv(out_path, index=False)
-        self.logger.info(f"Wrote CSV: {out_path} ({len(final_df)} rows)")
+        # Write CSV only if requested
+        if write_output:
+            final_df.to_csv(out_path, index=False)
+            self.logger.info(f"Wrote CSV: {out_path} ({len(final_df)} rows)")
+        else:
+            self.logger.debug("write_output=False; skipping CSV write to %s", out_path)
         return final_df
 
 

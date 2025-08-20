@@ -212,6 +212,14 @@ class TheirStackScraper:
                     ).strftime("%Y-%m-%d")
                     wide_payload = dict(check_payload)
                     wide_payload.update({"posted_at_gte": wide_gte})
+                    self.logger.info(
+                        "Wide pre-check start: posted_at_gte=%s countries=%s titles=%d max_age_days=%d exclude_ids=%d",
+                        wide_gte,
+                        ",".join(country_codes),
+                        len(title_filters),
+                        max_age_days,
+                        len(seen_ids),
+                    )
                     wresp = requests.post(
                         self.api_url,
                         json=wide_payload,
@@ -248,6 +256,7 @@ class TheirStackScraper:
 
                         collected_jobs: List[Dict] = []
                         page = 1
+                        pages_wide = 0
                         while len(collected_jobs) < target_to_fetch:
                             remaining = target_to_fetch - len(collected_jobs)
                             current_limit = min(page_size, remaining)
@@ -310,6 +319,7 @@ class TheirStackScraper:
                                 )
 
                                 collected_jobs.extend(page_new_jobs)
+                                pages_wide += 1
                                 if len(jobs) < current_limit:
                                     self.logger.info(
                                         "[wide] Last page reached at page %d (returned=%d < limit=%d).",
@@ -334,9 +344,18 @@ class TheirStackScraper:
                         )
 
                         process_theirstack_jobs(collected_jobs)
+                        self.logger.info(
+                            "Wide fetch summary: pages=%d collected=%d target=%d",
+                            pages_wide,
+                            len(collected_jobs),
+                            target_to_fetch,
+                        )
                         return collected_jobs
                 except Exception as we:
                     self.logger.warning("Wide pre-check failed: %s", we)
+                self.logger.info(
+                    "Pre-check and wide pre-check found no new jobs or wide fetch skipped; returning 0 jobs."
+                )
                 return []
         except Exception as e:
             self.logger.error(f"Pre-check request failed: {e}")
@@ -344,10 +363,17 @@ class TheirStackScraper:
 
         # Determine how many to fetch this run (respect daily cap)
         target_to_fetch = min(total_jobs, max_jobs_per_run)
+        self.logger.info(
+            "Proceeding with paid fetch: total_results=%d target_to_fetch=%d page_size=%d",
+            total_jobs,
+            target_to_fetch,
+            page_size,
+        )
 
         # Now make the paid, paginated requests
         collected_jobs: List[Dict] = []
         page = 1
+        pages_paid = 0
         while len(collected_jobs) < target_to_fetch:
             remaining = target_to_fetch - len(collected_jobs)
             current_limit = min(page_size, remaining)
@@ -407,6 +433,7 @@ class TheirStackScraper:
                 )
 
                 collected_jobs.extend(page_new_jobs)
+                pages_paid += 1
 
                 # If fewer than requested returned, likely end of results
                 if len(jobs) < current_limit:
@@ -423,6 +450,12 @@ class TheirStackScraper:
                 self.logger.error(f"Error fetching jobs: {e}")
                 break
 
+        self.logger.info(
+            "Paid fetch summary: pages=%d collected=%d target=%d",
+            pages_paid,
+            len(collected_jobs),
+            target_to_fetch,
+        )
         # Update state and persist when we have collected something (or even if zero to advance last run)
         for job in collected_jobs:
             self.state.add_job_id(str(job["id"]))

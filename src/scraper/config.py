@@ -44,30 +44,24 @@ class ScraperConfig:
             },
             "sources": {
                 "amazon": {
-                    "engine": "selenium",
-                    "base_url": (
-                        "https://amazon.jobs/en/search?"
-                        "offset=0&result_limit=10&sort=relevant"
-                        "&category%5B%5D=business-intelligence"
-                        "&category%5B%5D=software-development"
-                        "&category%5B%5D=project-program-product-management-technical"
-                        "&category%5B%5D=machine-learning-science"
-                        "&category%5B%5D=data-science"
-                        "&category%5B%5D=operations-it-support-engineering"
-                        "&category%5B%5D=research-science"
-                        "&category%5B%5D=solutions-architect"
-                        "&country%5B%5D=LUX"
-                        "&distanceType=Mi&radius=24km"
-                        "&industry_experience=four_to_six_years"
-                        "&job_level%5B%5D=5"
-                        "&job_level%5B%5D=6"
-                        "&latitude=&longitude=&loc_group_id=&loc_query=&base_query=&city=&country=&region=&county=&query_options="
-                    ),
+                    # Engine is chosen from YAML/env; defaults here are minimal to enforce central control via YAML
+                    "engine": "api",
+                    # Keep URLs empty in defaults; require YAML to provide base_url and/or html_base_url
+                    "base_url": "",
+                    "html_base_url": "",
+                    # Execution controls
                     "max_workers": 3,
                     "batch_size": 10,
+                    "headless": True,
+                    "refresh_existing": False,
                     "delays": {"min": 1, "max": 3},
                     "raw_filename": "amazon_jobs.csv",
-                    "api": {"save_page_json": True},
+                    "api": {"save_page_json": False},
+                    "limits": {
+                        "max_pages": 0,
+                        "max_jobs": 0,
+                        "max_runtime_seconds": 0,
+                    },
                 },
                 "theirstack": {
                     "api_url": "https://api.theirstack.com/v1/jobs/search",
@@ -118,8 +112,21 @@ class ScraperConfig:
 
         env_mappings = {
             "AMAZON_SCRAPER_BASE_URL": ("sources", "amazon", "base_url"),
+            "AMAZON_SCRAPER_HTML_BASE_URL": ("sources", "amazon", "html_base_url"),
             "AMAZON_SCRAPER_MAX_WORKERS": ("sources", "amazon", "max_workers"),
             "AMAZON_SCRAPER_BATCH_SIZE": ("sources", "amazon", "batch_size"),
+            "AMAZON_SCRAPER_HEADLESS": ("sources", "amazon", "headless"),
+            "AMAZON_SCRAPER_REFRESH_EXISTING": (
+                "sources",
+                "amazon",
+                "refresh_existing",
+            ),
+            "AMAZON_SCRAPER_MAX_RUNTIME_SECONDS": (
+                "sources",
+                "amazon",
+                "limits",
+                "max_runtime_seconds",
+            ),
             "AMAZON_ENGINE": ("sources", "amazon", "engine"),
             # Paths are YAML-driven; do not override via env to avoid drift
             "AMAZON_SCRAPER_LOG_LEVEL": ("common", "logging", "level"),
@@ -138,13 +145,15 @@ class ScraperConfig:
 
                 # Set the value, converting types as needed
                 key = config_path[-1]
-                if key in ["max_workers", "batch_size"]:
+                if key in ["max_workers", "batch_size", "max_runtime_seconds"]:
                     current[key] = int(env_value)
                 elif key in ["delays.min", "delays.max"]:
                     delay_key = key.split(".")[-1]
                     if "delays" not in current:
                         current["delays"] = {}
                     current["delays"][delay_key] = int(env_value)
+                elif key in ["headless", "refresh_existing"]:
+                    current[key] = str(env_value).lower() in ["1", "true", "yes", "on"]
                 else:
                     current[key] = env_value
 
