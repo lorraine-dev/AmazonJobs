@@ -27,7 +27,8 @@ The dashboard shows:
 
 ## 🛠️ Technology Stack
 
-- **Python** (Selenium, Pandas)
+- **Python** (Pandas, Selenium, Requests, BeautifulSoup, PyYAML, Plotly, python-dotenv, langdetect)
+- **Dev/optional**: lxml, nbformat (used for notebooks and optional HTML/XML parsing backends)
 - **GitHub Actions** (automation)
 - **GitHub Pages** (hosting)
 
@@ -35,32 +36,54 @@ The dashboard shows:
 
 ## 📁 Project Structure
 
-
 ```
-├── .github/workflows/scraper.yml        # Automated unified workflow (scrape, combine, deploy)
-├── src/scraper/amazon_scraper.py        # Amazon scraper (Selenium)
-├── src/scraper/theirstack_scraper.py    # TheirStack API scraper
-├── src/scraper/theirstack_processor.py  # Map TheirStack fields -> unified schema
-├── src/utils/raw_storage.py             # Unified raw CSV writer with dedupe
-├── src/utils/combine_jobs.py            # Merge raw CSVs -> combined CSV
-├── src/utils/paths.py                   # Centralized path helpers
-├── src/utils/category_mapper.py         # Category inference
-├── src/utils/dashboard_template.py      # HTML template generator
-├── src/utils/dashboard_visuals.py       # Sankey diagram and visuals
-├── src/utils/data_analytics.py          # Skill breakdown analytics
-├── src/utils/data_processor.py          # Dashboard generator
-├── src/scripts/run_scraper.py           # Unified runner (CLI)
-├── config/scraper_config.yaml           # Source configs and limits
-├── config/category_mapping.yaml         # Mapping rules for categories
-├── docs/index.html                      # Dashboard (auto-generated)
-├── docs/skills.css                      # Skills visualization styles
-├── docs/style.css                       # Main dashboard styles
-├── data/raw/                            # Raw per-source CSVs (artifacts)
-├── data/processed/combined_jobs.csv     # Unified CSV for dashboard
-├── data/backups/                        # TheirStack API request/response backups
-└── requirements.txt                     # Dependencies
+├── .github/workflows/scraper.yml            # Automated workflow (scrape, combine, deploy)
+├── config/
+│   ├── scraper_config.yaml                  # Source configs and limits
+│   ├── category_mapping.yaml                # Mapping rules for categories
+│   └── theirstack_titles.json               # Title normalization hints for TheirStack
+├── docs/
+│   ├── index.html                           # Dashboard (auto-generated)
+│   ├── style.css                            # Main dashboard styles
+│   ├── skills.css                           # Skills visualization styles
+│   ├── dashboard_interactions.js            # Client-side interactions
+│   └── reference/                           # API/reference assets
+├── src/
+│   ├── scraper/
+│   │   ├── amazon_scraper.py                # Legacy/simple Amazon scraper
+│   │   ├── amazon_api_scraper.py            # Amazon Jobs API scraper
+│   │   ├── amazon_selenium_scraper.py       # Amazon Selenium scraper
+│   │   ├── theirstack_scraper.py            # TheirStack API scraper
+│   │   ├── theirstack_processor.py          # TheirStack → unified schema
+│   │   ├── config.py                        # Scraper config helpers
+│   │   └── engines.py                       # Scraper engines
+│   ├── utils/
+│   │   ├── paths.py                         # Centralized path helpers
+│   │   ├── category_mapper.py               # Category inference
+│   │   ├── raw_storage.py                   # Unified raw CSV writer with dedupe
+│   │   ├── combine_jobs.py                  # Merge raw CSVs → combined CSV
+│   │   ├── data_analytics.py                # Skill breakdown analytics
+│   │   ├── data_processor.py                # Dashboard generator
+│   │   ├── dashboard_template.py            # HTML template generator
+│   │   ├── dashboard_visuals.py             # Sankey diagram and visuals
+│   │   ├── description_parser.py            # JD section parser
+│   │   ├── logging_utils.py                 # Logging configuration utilities
+│   │   ├── health_check.py                  # Pre-flight checks and validations
+│   │   ├── monitoring.py                    # Simple runtime metrics
+│   │   ├── text_lang.py                     # Language detection helpers
+│   │   └── theirstack_state.py              # TheirStack incremental state
+│   └── scripts/
+│       └── run_scraper.py                   # Unified runner (CLI)
+├── data/
+│   ├── raw/                                 # Raw per-source CSVs (artifacts)
+│   ├── processed/
+│   │   └── combined_jobs.csv                # Unified CSV for dashboard
+│   └── backups/                             # TheirStack request/response backups
+├── README.md
+├── requirements.txt
+├── setup.py
+└── .gitignore
 ```
-
 
 ---
 
@@ -93,6 +116,10 @@ The dashboard shows:
 
    # Run only Amazon
    python src/scripts/run_scraper.py --source amazon
+
+   # Force Amazon engine (API or Selenium)
+   python src/scripts/run_scraper.py --source amazon --amazon-engine api
+   python src/scripts/run_scraper.py --source amazon --amazon-engine selenium
    ```
 6. Generate the dashboard (if needed):
    ```bash
@@ -109,7 +136,8 @@ Edit `config/scraper_config.yaml` to change scraping parameters (e.g., base URL,
 
 ## 🤖 Automation
 
-- **GitHub Actions** runs 3x daily (see `.github/workflows/scraper.yml`).
+- **GitHub Actions** runs 3x daily at 08:00, 14:00, and 18:00 UTC (see `.github/workflows/scraper.yml`).
+- You can also run it manually and choose the Amazon engine via the `amazon_engine` input (defaults to `api`).
 - Secrets: add `THEIR_STACK_API_KEY` under Settings → Secrets and variables → Actions.
 - Artifacts persisted between runs:
   - `job-data`: contents of `data/raw/` (raw CSVs)
