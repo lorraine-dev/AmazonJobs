@@ -16,10 +16,126 @@ document.addEventListener('DOMContentLoaded', () => {
     const nextButton = document.getElementById('next-page');
 
     let sortDirection = 'desc';
+    let lastCategoryKey = null; // track last category to guard resets
+    let currentSkills = []; // skills computed from currently visible rows
+    let currentSkillsTotalJobs = 0; // denominator for percentages
 
     function getSelectedCompanies() {
         if (!companyOptionsContainer) return [];
         return Array.from(companyOptionsContainer.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+    }
+
+    // Split HTML bullet-like content into individual skill lines
+    function splitHtmlBullets(html) {
+        if (!html) return [];
+        let text = String(html);
+        // Decode HTML entities so &lt;br/&gt; etc. become real tags
+        const decodeHtml = (s) => {
+            const el = document.createElement('textarea');
+            el.innerHTML = s;
+            return el.value;
+        };
+        // Decode twice defensively in case of double-encoding
+        text = decodeHtml(decodeHtml(text));
+
+        // Normalize tag-based line breaks and strip list wrappers/tags
+        text = text.replace(/<br\s*\/?/gi, '\n')
+                   .replace(/<\/(?:li|p)\s*>/gi, '\n')
+                   .replace(/<(?:li|p)\s*>/gi, '')
+                   .replace(/<ul[^>]*>|<\/ul\s*>/gis, '')
+                   .replace(/<[^>]+>/g, ' ');
+
+        // Also convert literal "<br/>" text that may remain after decoding to newlines
+        text = text.replace(/\s*&lt;br\s*\/?&gt;\s*/gi, '\n');
+        // Collapse excessive whitespace
+        text = text.replace(/\s{2,}/g, ' ');
+
+        const raw = text.split(/\r?\n+/).map(s => s.trim()).filter(Boolean);
+        const out = [];
+        const seen = new Set();
+        const skipPattern = /(amazon\s+is\s+an\s+equal|privacy\s+notice|inclusive\s+culture|accommodations|recruiting\s+decisions|workforce|protecting\s+your\s+privacy)/i;
+        raw.forEach(line => {
+            let s = line
+                // Strip any leading quote/bullet/whitespace markers robustly
+                .replace(/^[>\-–—•*·\s\u00A0]+/, '')
+                .replace(/[\s\.;:,]+$/, '')
+                .trim();
+            // Filter out obvious disclaimers/URLs/overly long paragraphs that aren't skills
+            const looksLikeUrl = /https?:\/\//i.test(s);
+            const isNA = /^(?:n\s*\/?\s*a|n\.?a\.?|nan)$/i.test(s);
+            const isNanToken = /^nan$/i.test(s);
+            const hasLetters = /[a-z]/i.test(s);
+            if (s && hasLetters && !isNA && !isNanToken && s.length <= 180 && !looksLikeUrl && !skipPattern.test(s) && !seen.has(s)) {
+                seen.add(s);
+                out.push(s);
+            }
+        });
+        return out;
+    }
+
+    // Compute skills from the qualifications in the details of visible rows
+    function computeSkillsFromVisibleRows(visibleRows) {
+        const map = new Map(); // name -> { basic_count, preferred_count }
+        const getNextPHtml = (detailsEl, heading) => {
+            const h4s = detailsEl.querySelectorAll('h4');
+            for (const h4 of h4s) {
+                if ((h4.textContent || '').toLowerCase().includes(heading)) {
+                    const p = h4.nextElementSibling;
+                    if (p && p.tagName === 'P') return p.innerHTML || p.textContent || '';
+                }
+            }
+            return '';
+        };
+
+        visibleRows.forEach(row => {
+            const details = row.querySelector('.details-container');
+            if (!details) return;
+            const basicHtml = getNextPHtml(details, 'basic qualifications');
+            const prefHtml = getNextPHtml(details, 'preferred qualifications');
+            const basicList = splitHtmlBullets(basicHtml);
+            const prefList = splitHtmlBullets(prefHtml);
+
+            basicList.forEach(name => {
+                const rec = map.get(name) || { basic_count: 0, preferred_count: 0 };
+                rec.basic_count += 1;
+                map.set(name, rec);
+            });
+            prefList.forEach(name => {
+                const rec = map.get(name) || { basic_count: 0, preferred_count: 0 };
+                rec.preferred_count += 1;
+                map.set(name, rec);
+            });
+        });
+
+        const arr = Array.from(map.entries()).map(([name, counts]) => [name, counts, counts.basic_count + counts.preferred_count]);
+        arr.sort((a, b) => b[2] - a[2]);
+        return arr;
+    }
+
+    // Update pagination controls from a skills list
+    function updateSkillsPaginationUI(skills) {
+        const totalSkills = Array.isArray(skills) ? skills.length : 0;
+        const totalPages = Math.max(1, Math.ceil(totalSkills / skillsPerPage));
+        const paginationContainer = document.getElementById('skills-pagination');
+        const prevBtn = document.getElementById('prev-page');
+        const nextBtn = document.getElementById('next-page');
+        const pageInfo = document.getElementById('page-info');
+
+        // Clamp current page defensively
+        currentPage = Math.min(Math.max(1, currentPage), totalPages);
+
+        // Always update text so stale values don't persist
+        if (pageInfo) pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+
+        if (paginationContainer) {
+            if (totalSkills > skillsPerPage) {
+                paginationContainer.classList.remove('hidden');
+                if (prevBtn) prevBtn.disabled = currentPage === 1;
+                if (nextBtn) nextBtn.disabled = currentPage === totalPages;
+            } else {
+                paginationContainer.classList.add('hidden');
+            }
+        }
     }
 
     function buildFacetCompanyCounts({ searchTerm, selectedCategory, selectedStatus }) {
@@ -98,7 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // React to any checkbox change
         if (companyOptionsContainer) {
             companyOptionsContainer.addEventListener('change', () => {
-                applyFilters();
+                applyFilters({ resetPage: true });
             });
         }
     }
@@ -129,6 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!Array.isArray(window.jobsData)) return [];
 
         const norm = (s) => (s || '').toString();
+        const term = (searchTerm || '').toLowerCase();
         const wantActive = selectedStatus === 'Active' ? true : selectedStatus === 'Inactive' ? false : null;
 
         return window.jobsData.filter(job => {
@@ -136,16 +253,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const company = norm(job.company);
             const companyLower = company.toLowerCase();
             const category = norm(job.job_category);
-            const team = norm(job.team);
             const role = norm(job.role);
             const active = typeof job.active === 'boolean' ? job.active : Boolean(job.active);
 
-            const matchesSearch = searchTerm === '' || title.includes(searchTerm) || companyLower.includes(searchTerm);
+            const matchesSearch = term === '' || title.includes(term) || companyLower.includes(term);
             const matchesCategory = selectedCategory === '' || category === selectedCategory;
             const matchesStatus = wantActive === null || active === wantActive;
             const matchesCompany = selectedCompanies.length === 0 || selectedCompanies.includes(company);
 
-            return matchesSearch && matchesCategory && matchesStatus && matchesCompany && category && team && role;
+            return matchesSearch && matchesCategory && matchesStatus && matchesCompany && category && company && role;
         });
     }
 
@@ -158,23 +274,23 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Build flows: Category -> Team, Team -> Role
-        const ctCounts = new Map(); // key: cat||team -> count
-        const trCounts = new Map(); // key: team||role -> count
+        // Build flows: Category -> Company, Company -> Role
+        const ccCounts = new Map(); // key: cat||company -> count
+        const crCounts = new Map(); // key: company||role -> count
         const nodeSet = new Set();
 
         filteredJobs.forEach(j => {
             const cat = (j.job_category || '').toString();
-            const team = (j.team || '').toString();
+            const company = (j.company || '').toString();
             const role = (j.role || '').toString();
-            if (!cat || !team || !role) return;
+            if (!cat || !company || !role) return;
 
-            nodeSet.add(cat); nodeSet.add(team); nodeSet.add(role);
+            nodeSet.add(cat); nodeSet.add(company); nodeSet.add(role);
 
-            const k1 = `${cat}||${team}`;
-            const k2 = `${team}||${role}`;
-            ctCounts.set(k1, (ctCounts.get(k1) || 0) + 1);
-            trCounts.set(k2, (trCounts.get(k2) || 0) + 1);
+            const k1 = `${cat}||${company}`;
+            const k2 = `${company}||${role}`;
+            ccCounts.set(k1, (ccCounts.get(k1) || 0) + 1);
+            crCounts.set(k2, (crCounts.get(k2) || 0) + 1);
         });
 
         const nodes = Array.from(nodeSet);
@@ -197,11 +313,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const nodeColorMap = new Map();
         filteredJobs.forEach(j => {
             const cat = (j.job_category || '').toString();
-            const team = (j.team || '').toString();
+            const company = (j.company || '').toString();
             const role = (j.role || '').toString();
             const col = categoryColor.get(cat) || '#CCCCCC';
             if (cat) nodeColorMap.set(cat, col);
-            if (team) nodeColorMap.set(team, col);
+            if (company) nodeColorMap.set(company, col);
             if (role) nodeColorMap.set(role, col);
         });
 
@@ -211,10 +327,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const nodeCount = new Map();
         filteredJobs.forEach(j => {
             const cat = (j.job_category || '').toString();
-            const team = (j.team || '').toString();
+            const company = (j.company || '').toString();
             const role = (j.role || '').toString();
             if (cat) nodeCount.set(cat, (nodeCount.get(cat) || 0) + 1);
-            if (team) nodeCount.set(team, (nodeCount.get(team) || 0) + 1);
+            if (company) nodeCount.set(company, (nodeCount.get(company) || 0) + 1);
             if (role) nodeCount.set(role, (nodeCount.get(role) || 0) + 1);
         });
         const nodeLabels = nodes.map(n => `${n} - ${nodeCount.get(n) || 0}`);
@@ -226,21 +342,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const linkColors = [];
         const toLinkColor = (rgba) => rgba.replace('0.8', '0.4');
 
-        for (const [k, v] of ctCounts.entries()) {
-            const [cat, team] = k.split('||');
-            if (!idFor.has(cat) || !idFor.has(team)) continue;
+        for (const [k, v] of ccCounts.entries()) {
+            const [cat, company] = k.split('||');
+            if (!idFor.has(cat) || !idFor.has(company)) continue;
             sources.push(idFor.get(cat));
-            targets.push(idFor.get(team));
+            targets.push(idFor.get(company));
             values.push(v);
             linkColors.push(toLinkColor(nodeColorMap.get(cat) || '#CCCCCC'));
         }
-        for (const [k, v] of trCounts.entries()) {
-            const [team, role] = k.split('||');
-            if (!idFor.has(team) || !idFor.has(role)) continue;
-            sources.push(idFor.get(team));
+        for (const [k, v] of crCounts.entries()) {
+            const [company, role] = k.split('||');
+            if (!idFor.has(company) || !idFor.has(role)) continue;
+            sources.push(idFor.get(company));
             targets.push(idFor.get(role));
             values.push(v);
-            linkColors.push(toLinkColor(nodeColorMap.get(team) || '#CCCCCC'));
+            linkColors.push(toLinkColor(nodeColorMap.get(company) || '#CCCCCC'));
         }
 
         // Cache base state for highlighting
@@ -275,7 +391,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }];
 
         const layout = {
-            title: 'Amazon Luxembourg Job Flow: Category → Team → Role',
+            title: 'Amazon Luxembourg Job Flow: Category → Company → Role',
             font: { size: 10 },
             height: 600,
             margin: { l: 10, r: 10, t: 50, b: 10 }
@@ -334,7 +450,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const highlightedNodes = new Set([idx]);
                 const highlightedLinks = new Set();
 
-                // Upstream: direct incoming (Category -> Team when focus is Team, or Team -> Role when focus is Role)
+                // Upstream: direct incoming (Category -> Company when focus is Company, or Company -> Role when focus is Role)
                 st.targets.forEach((t, i) => {
                     if (t === idx) {
                         highlightedLinks.add(i);
@@ -369,7 +485,22 @@ document.addEventListener('DOMContentLoaded', () => {
         Plotly.restyle(container, { 'node.color': [nodeColors], 'link.color': [linkColors] }, [0]);
     }
 
-    function applyFilters() {
+    // Animate skill bars so width transitions are visible on render
+    function animateSkillBars() {
+        if (!skillsListContainer) return;
+        const bars = skillsListContainer.querySelectorAll('.skill-bar-basic, .skill-bar-preferred');
+        bars.forEach(el => {
+            const target = el.style.width;
+            el.style.width = '0%';
+            // force reflow
+            void el.offsetWidth;
+            requestAnimationFrame(() => {
+                el.style.width = target;
+            });
+        });
+    }
+
+    function applyFilters({ resetPage = true } = {}) {
         const searchTerm = searchInput.value.toLowerCase();
         const selectedCategory = categoryFilter.value;
         const selectedStatus = statusFilter.value;
@@ -380,6 +511,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateCompanyOptionLabels(facetCounts);
         updateCompanyToggleLabel(selectedCompanies);
 
+        // Apply DOM filtering for table rows
         rows.forEach(row => {
             const roleText = row.children[0].querySelector('.summary-content').textContent.toLowerCase();
             const companyTextRaw = row.children[1].textContent;
@@ -399,19 +531,27 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Always reset to the first page when filters change
-        // currentPage = 1; (This line should be here, but let's assume it's commented out for the bug)
-
-        // Update skills list based on the selected category
+        // Compute dynamic skills from currently visible rows
         const categoryKey = selectedCategory || 'All Categories';
-        const skillsForCategory = skillsData[categoryKey] || [];
-        const totalJobsForCategory = categoryJobCounts[categoryKey] || 0;
+        const categoryChanged = lastCategoryKey !== categoryKey;
+        lastCategoryKey = categoryKey;
 
-        skillsHeader.textContent = `Top Skills for ${categoryKey} (${totalJobsForCategory} jobs)`;
-        skillsListContainer.innerHTML = generateSkillsHtml(skillsForCategory, totalJobsForCategory, currentPage);
-        updateSkillsPagination(skillsForCategory);
+        const visibleRows = Array.from(tbody.querySelectorAll('tr.job-row:not(.hidden)'));
+        currentSkillsTotalJobs = visibleRows.length;
+        currentSkills = computeSkillsFromVisibleRows(visibleRows);
 
-        // Update Sankey from all filtered jobs (ignores DOM pagination/visibility)
+        if (resetPage || categoryChanged) {
+            currentPage = 1;
+        }
+
+        if (skillsHeader) skillsHeader.textContent = `Top Skills for ${categoryKey} (${currentSkillsTotalJobs} jobs)`;
+        if (skillsListContainer) {
+            skillsListContainer.innerHTML = generateSkillsHtml(currentSkills, currentSkillsTotalJobs, currentPage);
+            updateSkillsPaginationUI(currentSkills);
+            animateSkillBars();
+        }
+
+        // Update Sankey from source-of-truth jobsData with same filters
         const filteredForSankey = getFilteredJobsForSankey({
             searchTerm,
             selectedCategory,
@@ -424,15 +564,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // Pagination event listeners
     prevButton.addEventListener('click', () => {
         currentPage = Math.max(1, currentPage - 1);
-        applyFilters(); // Re-apply filters to refresh skills list
+        applyFilters({ resetPage: false }); // Re-apply filters to refresh skills list
     });
 
     nextButton.addEventListener('click', () => {
-        const selectedCategory = categoryFilter.value || 'All Categories';
-        const skillsForCategory = skillsData[selectedCategory] || [];
-        const totalPages = Math.ceil(skillsForCategory.length / skillsPerPage);
+        const totalPages = Math.max(1, Math.ceil((currentSkills || []).length / skillsPerPage));
         currentPage = Math.min(totalPages, currentPage + 1);
-        applyFilters(); // Re-apply filters to refresh skills list
+        applyFilters({ resetPage: false }); // Re-apply filters to refresh skills list
     });
 
     function sortTable() {
@@ -480,12 +618,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initial sort on page load (newest jobs first)
     sortTable();
     // Initial render of skills and pagination
-    applyFilters();
+    applyFilters({ resetPage: true });
 
     // Event listeners
-    searchInput.addEventListener('input', applyFilters);
-    categoryFilter.addEventListener('change', applyFilters);
-    statusFilter.addEventListener('change', applyFilters);
+    searchInput.addEventListener('input', () => applyFilters({ resetPage: true }));
+    categoryFilter.addEventListener('change', () => {
+        // Explicitly reset page on category change to ensure correct pagination
+        currentPage = 1;
+        applyFilters({ resetPage: true });
+    });
+    statusFilter.addEventListener('change', () => applyFilters({ resetPage: true }));
     // company checkbox changes handled in initializeCompanyMultiSelect
     postingDateHeader.addEventListener('click', sortTable);
 

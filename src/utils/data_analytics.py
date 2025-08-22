@@ -15,11 +15,27 @@ def _clean_and_split_quals(text: str) -> list:
     boilerplate_pattern = r"Amazon is an equal opportunities employer.*"
     text = re.sub(boilerplate_pattern, "", text, flags=re.DOTALL)
 
-    # Split the text by newline, and clean up each line
-    quals = [
-        re.sub(r"^- ", "", line).strip() for line in text.split("\n") if line.strip()
-    ]
-    return [qual for qual in quals if qual]
+    # Normalize HTML line breaks and list markup to newlines
+    text = re.sub(r"(?i)<br\s*/?>", "\n", text)
+    text = re.sub(r"(?i)</li\s*>", "\n", text)
+    text = re.sub(r"(?i)<li\s*>", "", text)
+    text = re.sub(r"(?is)<ul[^>]*>|</ul\s*>", "", text)
+    # Strip any remaining tags conservatively
+    text = re.sub(r"(?is)<[^>]+>", " ", text)
+
+    # Split into lines and clean bullet prefixes
+    raw_lines = [ln.strip() for ln in re.split(r"[\r\n]+", text) if ln.strip()]
+    cleaned = []
+    seen = set()
+    for line in raw_lines:
+        # Remove common bullet characters and dashes at the start
+        line = re.sub(r"^[\-–—•*·]+\s*", "", line)
+        # Trim trailing punctuation noise
+        line = re.sub(r"[\s\.;:,]+$", "", line)
+        if line and line not in seen:
+            seen.add(line)
+            cleaned.append(line)
+    return cleaned
 
 
 def get_skills_by_category(df: pd.DataFrame, job_category: str) -> list:
