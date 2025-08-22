@@ -5,6 +5,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('search-input');
     const categoryFilter = document.getElementById('category-filter');
     const statusFilter = document.getElementById('status-filter');
+    const companyFilter = document.getElementById('company-filter'); // wrapper div
+    const companyToggle = companyFilter ? companyFilter.querySelector('.multi-select-toggle') : null;
+    const companyMenu = companyFilter ? companyFilter.querySelector('.multi-select-menu') : null;
+    const companyOptionsContainer = companyFilter ? companyFilter.querySelector('.multi-select-options') : null;
     const postingDateHeader = document.getElementById('posting-date-header');
     const skillsHeader = document.getElementById('skills-header');
     const skillsListContainer = document.getElementById('skills-list');
@@ -13,22 +17,382 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let sortDirection = 'desc';
 
+    function getSelectedCompanies() {
+        if (!companyOptionsContainer) return [];
+        return Array.from(companyOptionsContainer.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+    }
+
+    function buildFacetCompanyCounts({ searchTerm, selectedCategory, selectedStatus }) {
+        const counts = {};
+        rows.forEach(row => {
+            const roleText = row.children[0].querySelector('.summary-content').textContent.toLowerCase();
+            const companyTextRaw = row.children[1].textContent;
+            const companyText = companyTextRaw.trim();
+            const categoryText = row.children[2].textContent;
+            const statusText = row.children[4].textContent;
+
+            const matchesSearch = searchTerm === '' || roleText.includes(searchTerm) || companyText.toLowerCase().includes(searchTerm);
+            const matchesCategory = selectedCategory === '' || categoryText === selectedCategory;
+            const matchesStatus = selectedStatus === '' || statusText === selectedStatus;
+
+            if (matchesSearch && matchesCategory && matchesStatus) {
+                counts[companyText] = (counts[companyText] || 0) + 1;
+            }
+        });
+        return counts;
+    }
+
+    function initializeCompanyMultiSelect(allCounts) {
+        if (!companyOptionsContainer) return;
+        if (companyOptionsContainer.childElementCount > 0) return; // already
+        const companies = Object.keys(allCounts).sort((a, b) => a.localeCompare(b));
+        companies.forEach(name => {
+            const id = `cmp_${name.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+            const wrapper = document.createElement('label');
+            wrapper.className = 'multi-select-option';
+            wrapper.setAttribute('for', id);
+
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.id = id;
+            cb.value = name;
+
+            const textSpan = document.createElement('span');
+            textSpan.className = 'option-label';
+            textSpan.textContent = name;
+
+            const countSpan = document.createElement('span');
+            countSpan.className = 'option-count';
+            countSpan.textContent = `(${allCounts[name] || 0})`;
+
+            wrapper.appendChild(cb);
+            wrapper.appendChild(textSpan);
+            wrapper.appendChild(countSpan);
+            companyOptionsContainer.appendChild(wrapper);
+        });
+
+        if (companyToggle) {
+            companyToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (!companyMenu) return;
+                companyMenu.classList.toggle('hidden');
+                const expanded = !companyMenu.classList.contains('hidden');
+                companyToggle.setAttribute('aria-expanded', String(expanded));
+            });
+        }
+
+        // Close when clicking outside
+        document.addEventListener('click', () => {
+            if (!companyMenu || !companyToggle) return;
+            if (!companyMenu.classList.contains('hidden')) {
+                companyMenu.classList.add('hidden');
+                companyToggle.setAttribute('aria-expanded', 'false');
+            }
+        });
+
+        // Prevent clicks inside menu from bubbling to document
+        if (companyMenu) {
+            companyMenu.addEventListener('click', (e) => e.stopPropagation());
+        }
+
+        // React to any checkbox change
+        if (companyOptionsContainer) {
+            companyOptionsContainer.addEventListener('change', () => {
+                applyFilters();
+            });
+        }
+    }
+
+    function updateCompanyOptionLabels(newCounts) {
+        if (!companyOptionsContainer) return;
+        companyOptionsContainer.querySelectorAll('.multi-select-option').forEach(label => {
+            const name = label.querySelector('.option-label').textContent;
+            const countSpan = label.querySelector('.option-count');
+            const count = newCounts[name] || 0;
+            countSpan.textContent = `(${count})`;
+        });
+    }
+
+    function updateCompanyToggleLabel(selectedCompanies) {
+        if (!companyToggle) return;
+        if (selectedCompanies.length === 0) {
+            companyToggle.textContent = 'Companies: All';
+        } else if (selectedCompanies.length <= 3) {
+            companyToggle.textContent = `Companies: ${selectedCompanies.join(', ')}`;
+        } else {
+            companyToggle.textContent = `Companies: ${selectedCompanies.length} selected`;
+        }
+    }
+
+    // Build filtered jobs from jobsData (source of truth for Sankey), not from DOM state
+    function getFilteredJobsForSankey({ searchTerm, selectedCategory, selectedStatus, selectedCompanies }) {
+        if (!Array.isArray(window.jobsData)) return [];
+
+        const norm = (s) => (s || '').toString();
+        const wantActive = selectedStatus === 'Active' ? true : selectedStatus === 'Inactive' ? false : null;
+
+        return window.jobsData.filter(job => {
+            const title = norm(job.title).toLowerCase();
+            const company = norm(job.company);
+            const companyLower = company.toLowerCase();
+            const category = norm(job.job_category);
+            const team = norm(job.team);
+            const role = norm(job.role);
+            const active = typeof job.active === 'boolean' ? job.active : Boolean(job.active);
+
+            const matchesSearch = searchTerm === '' || title.includes(searchTerm) || companyLower.includes(searchTerm);
+            const matchesCategory = selectedCategory === '' || category === selectedCategory;
+            const matchesStatus = wantActive === null || active === wantActive;
+            const matchesCompany = selectedCompanies.length === 0 || selectedCompanies.includes(company);
+
+            return matchesSearch && matchesCategory && matchesStatus && matchesCompany && category && team && role;
+        });
+    }
+
+    function renderSankeyFromJobs(filteredJobs) {
+        const container = document.getElementById('sankey-chart');
+        if (!container) return;
+
+        if (!filteredJobs || filteredJobs.length === 0) {
+            container.innerHTML = '<p>No jobs to display in Sankey.</p>';
+            return;
+        }
+
+        // Build flows: Category -> Team, Team -> Role
+        const ctCounts = new Map(); // key: cat||team -> count
+        const trCounts = new Map(); // key: team||role -> count
+        const nodeSet = new Set();
+
+        filteredJobs.forEach(j => {
+            const cat = (j.job_category || '').toString();
+            const team = (j.team || '').toString();
+            const role = (j.role || '').toString();
+            if (!cat || !team || !role) return;
+
+            nodeSet.add(cat); nodeSet.add(team); nodeSet.add(role);
+
+            const k1 = `${cat}||${team}`;
+            const k2 = `${team}||${role}`;
+            ctCounts.set(k1, (ctCounts.get(k1) || 0) + 1);
+            trCounts.set(k2, (trCounts.get(k2) || 0) + 1);
+        });
+
+        const nodes = Array.from(nodeSet);
+        const idFor = new Map(nodes.map((n, i) => [n, i]));
+
+        // Category color palette (fixed, consistent with Python version)
+        const palette = [
+            'rgba(255,0,255, 0.8)',   // magenta
+            'rgba(255,165,0, 0.8)',  // orange
+            'rgba(255,255,0, 0.8)',  // yellow
+            'rgba(0,128,0, 0.8)',    // green
+            'rgba(0,0,255, 0.8)',    // blue
+            'rgba(128,0,128, 0.8)',  // purple
+            'rgba(0,255,255, 0.8)',  // cyan
+        ];
+        const categories = Array.from(new Set(filteredJobs.map(j => (j.job_category || '').toString()).filter(Boolean)));
+        const categoryColor = new Map(categories.map((c, i) => [c, palette[i % palette.length]]));
+
+        // Assign colors to nodes based on their category
+        const nodeColorMap = new Map();
+        filteredJobs.forEach(j => {
+            const cat = (j.job_category || '').toString();
+            const team = (j.team || '').toString();
+            const role = (j.role || '').toString();
+            const col = categoryColor.get(cat) || '#CCCCCC';
+            if (cat) nodeColorMap.set(cat, col);
+            if (team) nodeColorMap.set(team, col);
+            if (role) nodeColorMap.set(role, col);
+        });
+
+        const nodeColors = nodes.map(n => nodeColorMap.get(n) || '#CCCCCC');
+
+        // Node labels with counts
+        const nodeCount = new Map();
+        filteredJobs.forEach(j => {
+            const cat = (j.job_category || '').toString();
+            const team = (j.team || '').toString();
+            const role = (j.role || '').toString();
+            if (cat) nodeCount.set(cat, (nodeCount.get(cat) || 0) + 1);
+            if (team) nodeCount.set(team, (nodeCount.get(team) || 0) + 1);
+            if (role) nodeCount.set(role, (nodeCount.get(role) || 0) + 1);
+        });
+        const nodeLabels = nodes.map(n => `${n} - ${nodeCount.get(n) || 0}`);
+
+        // Links
+        const sources = [];
+        const targets = [];
+        const values = [];
+        const linkColors = [];
+        const toLinkColor = (rgba) => rgba.replace('0.8', '0.4');
+
+        for (const [k, v] of ctCounts.entries()) {
+            const [cat, team] = k.split('||');
+            if (!idFor.has(cat) || !idFor.has(team)) continue;
+            sources.push(idFor.get(cat));
+            targets.push(idFor.get(team));
+            values.push(v);
+            linkColors.push(toLinkColor(nodeColorMap.get(cat) || '#CCCCCC'));
+        }
+        for (const [k, v] of trCounts.entries()) {
+            const [team, role] = k.split('||');
+            if (!idFor.has(team) || !idFor.has(role)) continue;
+            sources.push(idFor.get(team));
+            targets.push(idFor.get(role));
+            values.push(v);
+            linkColors.push(toLinkColor(nodeColorMap.get(team) || '#CCCCCC'));
+        }
+
+        // Cache base state for highlighting
+        const sankeyState = {
+            nodes,
+            idFor,
+            sources,
+            targets,
+            baseNodeColors: nodeColors.slice(),
+            baseLinkColors: linkColors.slice(),
+            nodeLabels
+        };
+        container.__sankeyState = sankeyState;
+
+        const data = [{
+            type: 'sankey',
+            arrangement: 'fixed',
+            node: {
+                pad: 15,
+                thickness: 15,
+                line: { color: 'black', width: 0.5 },
+                color: sankeyState.baseNodeColors,
+                label: sankeyState.nodeLabels,
+                hovertemplate: '%{label}<extra></extra>'
+            },
+            link: {
+                source: sankeyState.sources,
+                target: sankeyState.targets,
+                value: values,
+                color: sankeyState.baseLinkColors
+            }
+        }];
+
+        const layout = {
+            title: 'Amazon Luxembourg Job Flow: Category → Team → Role',
+            font: { size: 10 },
+            height: 600,
+            margin: { l: 10, r: 10, t: 50, b: 10 }
+        };
+
+        Plotly.react(container, data, layout).then(() => {
+            // Reapply highlight if a focus exists
+            if (container.__sankeyFocus) {
+                applySankeyHighlight(container);
+            }
+        });
+
+        // Bind click-to-highlight once
+        if (!container.__sankeyClickBound) {
+            container.on('plotly_click', (eventData) => {
+                const p = eventData && eventData.points && eventData.points[0];
+                if (!p) return;
+                const label = typeof p.label === 'string' ? p.label : '';
+                // Our labels are "name - count"
+                const name = label.includes(' - ') ? label.split(' - ')[0] : label;
+                if (!name) return;
+
+                const st = container.__sankeyState;
+                if (!st) return;
+
+                // Toggle same selection off
+                if (container.__sankeyFocus === name) {
+                    container.__sankeyFocus = null;
+                } else {
+                    container.__sankeyFocus = name;
+                }
+
+                applySankeyHighlight(container);
+            });
+            container.__sankeyClickBound = true;
+        }
+    }
+
+    function applySankeyHighlight(container) {
+        const st = container.__sankeyState;
+        if (!st) return;
+
+        const focus = container.__sankeyFocus;
+        const dimAlpha = (rgba, a = '0.15') => rgba.replace(/rgba\(([^)]+),\s*([0-9.]+)\)/, (m, colors, _a) => `rgba(${colors}, ${a})`);
+        const linkDimAlpha = (rgba, a = '0.08') => rgba.replace(/rgba\(([^)]+),\s*([0-9.]+)\)/, (m, colors, _a) => `rgba(${colors}, ${a})`);
+
+        let nodeColors = st.baseNodeColors.slice();
+        let linkColors = st.baseLinkColors.slice();
+
+        if (focus) {
+            // Determine node index for focus
+            const idx = st.idFor.get(focus);
+            if (idx !== undefined) {
+                // Highlight full path: include direct upstream into the node
+                // and all downstream links/nodes until sinks (Roles)
+                const highlightedNodes = new Set([idx]);
+                const highlightedLinks = new Set();
+
+                // Upstream: direct incoming (Category -> Team when focus is Team, or Team -> Role when focus is Role)
+                st.targets.forEach((t, i) => {
+                    if (t === idx) {
+                        highlightedLinks.add(i);
+                        highlightedNodes.add(st.sources[i]);
+                    }
+                });
+
+                // Downstream BFS to sinks
+                const queue = [idx];
+                const visited = new Set([idx]);
+                while (queue.length > 0) {
+                    const n = queue.shift();
+                    st.sources.forEach((s, i) => {
+                        if (s === n) {
+                            highlightedLinks.add(i);
+                            const t = st.targets[i];
+                            if (!visited.has(t)) {
+                                visited.add(t);
+                                highlightedNodes.add(t);
+                                queue.push(t);
+                            }
+                        }
+                    });
+                }
+
+                // Dim all nodes/links not in highlighted sets
+                nodeColors = nodeColors.map((c, i) => highlightedNodes.has(i) ? c : dimAlpha(c));
+                linkColors = linkColors.map((c, i) => highlightedLinks.has(i) ? c : linkDimAlpha(c));
+            }
+        }
+
+        Plotly.restyle(container, { 'node.color': [nodeColors], 'link.color': [linkColors] }, [0]);
+    }
+
     function applyFilters() {
         const searchTerm = searchInput.value.toLowerCase();
         const selectedCategory = categoryFilter.value;
         const selectedStatus = statusFilter.value;
+        const selectedCompanies = getSelectedCompanies();
+
+        // Faceted counts for company filter (ignore company selection for counts)
+        const facetCounts = buildFacetCompanyCounts({ searchTerm, selectedCategory, selectedStatus });
+        updateCompanyOptionLabels(facetCounts);
+        updateCompanyToggleLabel(selectedCompanies);
 
         rows.forEach(row => {
             const roleText = row.children[0].querySelector('.summary-content').textContent.toLowerCase();
-            const companyText = row.children[1].textContent.toLowerCase();
+            const companyTextRaw = row.children[1].textContent;
+            const companyText = companyTextRaw.toLowerCase().trim();
             const categoryText = row.children[2].textContent;
             const statusText = row.children[4].textContent;
 
             const matchesSearch = searchTerm === '' || roleText.includes(searchTerm) || companyText.includes(searchTerm);
             const matchesCategory = selectedCategory === '' || categoryText === selectedCategory;
             const matchesStatus = selectedStatus === '' || statusText === selectedStatus;
+            const matchesCompany = selectedCompanies.length === 0 || selectedCompanies.includes(companyTextRaw.trim());
 
-            if (matchesSearch && matchesCategory && matchesStatus) {
+            if (matchesSearch && matchesCategory && matchesStatus && matchesCompany) {
                 row.classList.remove('hidden');
             } else {
                 row.classList.add('hidden');
@@ -46,6 +410,15 @@ document.addEventListener('DOMContentLoaded', () => {
         skillsHeader.textContent = `Top Skills for ${categoryKey} (${totalJobsForCategory} jobs)`;
         skillsListContainer.innerHTML = generateSkillsHtml(skillsForCategory, totalJobsForCategory, currentPage);
         updateSkillsPagination(skillsForCategory);
+
+        // Update Sankey from all filtered jobs (ignores DOM pagination/visibility)
+        const filteredForSankey = getFilteredJobsForSankey({
+            searchTerm,
+            selectedCategory,
+            selectedStatus,
+            selectedCompanies
+        });
+        renderSankeyFromJobs(filteredForSankey);
     }
 
     // Pagination event listeners
@@ -101,6 +474,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Initialize company options with overall counts, then render
+    const initialCounts = buildFacetCompanyCounts({ searchTerm: '', selectedCategory: '', selectedStatus: '' });
+    initializeCompanyMultiSelect(initialCounts);
     // Initial sort on page load (newest jobs first)
     sortTable();
     // Initial render of skills and pagination
@@ -110,6 +486,7 @@ document.addEventListener('DOMContentLoaded', () => {
     searchInput.addEventListener('input', applyFilters);
     categoryFilter.addEventListener('change', applyFilters);
     statusFilter.addEventListener('change', applyFilters);
+    // company checkbox changes handled in initializeCompanyMultiSelect
     postingDateHeader.addEventListener('click', sortTable);
 
     // Add click event for expanding rows

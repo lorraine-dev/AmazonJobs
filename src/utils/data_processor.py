@@ -13,7 +13,6 @@ from urllib.parse import urlparse
 
 # Import the new template function
 from .dashboard_template import generate_dashboard_html_template
-from .dashboard_visuals import create_sankey_diagram
 from .data_analytics import get_skills_by_category
 from src.scraper.config import ScraperConfig  # type: ignore
 from src.utils.paths import get_combined_file  # type: ignore
@@ -201,19 +200,35 @@ def create_dashboard_html(df: pd.DataFrame) -> str:
 
     table_rows = _generate_table_rows(df)
 
-    sankey_chart_html = create_sankey_diagram(df, as_html=True)
+    # Prepare lightweight jobs dataset for client-side Sankey rendering
+    jobs_data = []
+    for _, r in df.iterrows():
+        jobs_data.append(
+            {
+                "job_category": str(r.get("job_category", ""))
+                if pd.notna(r.get("job_category"))
+                else "",
+                "team": str(r.get("team", "")) if pd.notna(r.get("team")) else "",
+                "role": str(r.get("role", "")) if pd.notna(r.get("role")) else "",
+                "company": str(r.get("company", ""))
+                if pd.notna(r.get("company"))
+                else "",
+                "title": str(r.get("title", "")) if pd.notna(r.get("title")) else "",
+                "active": bool(r.get("active", True)),
+            }
+        )
 
     return generate_dashboard_html_template(
         total_jobs,
         active_jobs,
         last_updated,
         table_rows,
-        sankey_chart_html,
         job_categories,
         roles,
         teams,
         skills_data,
         category_job_counts,
+        jobs_data,
     )
 
 

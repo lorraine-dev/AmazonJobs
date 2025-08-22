@@ -87,6 +87,62 @@ tr.job-row:hover {
     border-radius: 4px;
     border: 1px solid #dee2e6;
 }
+.filter-controls input,
+.filter-controls select,
+.filter-controls .multi-select {
+    flex: 0 0 auto; /* Do not stretch */
+}
+
+/* Company multiselect */
+.multi-select {
+    position: relative;
+    display: inline-block;
+}
+.multi-select-toggle {
+    padding: 8px 10px;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+    background: #ffffff;
+    color: #212529;
+    cursor: pointer;
+    min-width: 200px;
+    text-align: left;
+}
+.multi-select-toggle:focus {
+    outline: 2px solid #99c2ff;
+    outline-offset: 2px;
+}
+.multi-select-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    width: 260px;
+    background: #ffffff;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    max-height: 280px;
+    overflow-y: auto;
+    z-index: 1000;
+    padding: 8px;
+}
+.multi-select-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    padding: 4px 2px;
+}
+.multi-select-option input {
+    margin: 0;
+}
+.multi-select-option .option-label {
+    flex: 1 1 auto;
+}
+.multi-select-option .option-count {
+    color: #6c757d;
+    font-size: 12px;
+}
 .active {
     color: #28a745;
     font-weight: bold;

@@ -12,12 +12,12 @@ def generate_dashboard_html_template(
     active_jobs: int,
     last_updated: str,
     table_rows: str,
-    sankey_chart_html: str,
     job_categories: list,
     roles: list,
     teams: list,
     skills_data: dict,
     category_job_counts: dict,
+    jobs_data: list,
 ) -> str:
     """
     Generates the static HTML dashboard template with dynamic data injected.
@@ -45,12 +45,13 @@ def generate_dashboard_html_template(
     # role_options = "".join([f'<option value="{r}">{r}</option>' for r in roles])
     # team_options = "".join([f'<option value="{t}">{t}</option>' for t in teams])
 
-    # Convert skills_data and category_job_counts to JSON for JavaScript
+    # Convert skills_data, category_job_counts, and jobs_data to JSON for JavaScript
     import json
 
     # Escape closing tags to prevent </script> breaking out of the script block
     skills_data_json = json.dumps(skills_data).replace("</", "<\\/")
     category_job_counts_json = json.dumps(category_job_counts).replace("</", "<\\/")
+    jobs_data_json = json.dumps(jobs_data).replace("</", "<\\/")
 
     # Generate the initial HTML for the skills list (for all categories)
     total_jobs_for_all = category_job_counts.get("All Categories", 0)
@@ -67,6 +68,7 @@ def generate_dashboard_html_template(
     <title>Jobs Dashboard</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="skills.css">
+    <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -99,6 +101,16 @@ def generate_dashboard_html_template(
                 <option value="">All Categories</option>
                 {category_options}
             </select>
+
+            <label for="company-filter">Company:</label>
+            <div id="company-filter" class="multi-select" aria-label="Company filter">
+                <button type="button" class="multi-select-toggle" aria-haspopup="listbox" aria-expanded="false">
+                    Companies: All
+                </button>
+                <div class="multi-select-menu hidden" role="listbox" aria-multiselectable="true">
+                    <div class="multi-select-options"><!-- Options populated dynamically --></div>
+                </div>
+            </div>
 
             <label for="status-filter">Status:</label>
             <select id="status-filter">
@@ -139,7 +151,7 @@ def generate_dashboard_html_template(
 
         <div id="sankey-chart-container" class="sankey-container">
             <h3>Job Distribution Flow</h3>
-            {sankey_chart_html}
+            <div id="sankey-chart"></div>
         </div>
         <div class="footer">
             <p>Last updated: {last_updated}</p>
@@ -150,6 +162,7 @@ def generate_dashboard_html_template(
     <script>
         const skillsData = {skills_data_json};
         const categoryJobCounts = {category_job_counts_json};
+        window.jobsData = {jobs_data_json};
         const skillsPerPage = 10;
         let currentPage = 1;
 
