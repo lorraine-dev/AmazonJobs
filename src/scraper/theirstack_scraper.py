@@ -2,6 +2,8 @@ import os
 from typing import Dict, List, Optional
 from dotenv import load_dotenv
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from datetime import datetime, timedelta
 import logging
 from pathlib import Path
@@ -42,6 +44,45 @@ class TheirStackScraper:
         # Backups directory
         self.backup_dir: Path = get_backup_dir(self.config)
         self.backup_dir.mkdir(parents=True, exist_ok=True)
+
+        # HTTP session with retries/backoff for resilience
+        try:
+            retries = int(self.config.get("common.http_retries") or 3)
+        except Exception:
+            retries = 3
+        try:
+            backoff = float(self.config.get("common.http_backoff") or 0.5)
+        except Exception:
+            backoff = 0.5
+
+        self.session = requests.Session()
+        retry = Retry(
+            total=retries,
+            read=retries,
+            connect=retries,
+            backoff_factor=backoff,
+            status_forcelist=(429, 500, 502, 503, 504),
+            allowed_methods=frozenset(["GET", "POST", "PUT", "DELETE"]),
+            raise_on_status=False,
+            respect_retry_after_header=True,
+        )
+        adapter = HTTPAdapter(max_retries=retry)
+        self.session.mount("https://", adapter)
+        self.session.mount("http://", adapter)
+        # Attach auth header to session to avoid repeating per request
+        self.session.headers.update(self.headers)
+
+        # Timeouts (seconds)
+        try:
+            self.timeout_precheck = int(
+                self.config.get("theirstack.timeout_precheck") or 10
+            )
+        except Exception:
+            self.timeout_precheck = 10
+        try:
+            self.timeout_paid = int(self.config.get("theirstack.timeout_paid") or 15)
+        except Exception:
+            self.timeout_paid = 15
 
     def _load_external_titles(self) -> List[str]:
         """Load additional job titles from config/theirstack_titles.json if present.
@@ -189,11 +230,10 @@ class TheirStackScraper:
                 len(seen_ids),
                 seen_preview,
             )
-            response = requests.post(
+            response = self.session.post(
                 self.api_url,
                 json=check_payload,
-                headers=self.headers,
-                timeout=10,
+                timeout=self.timeout_precheck,
             )
             response.raise_for_status()
             data = response.json()
@@ -226,11 +266,10 @@ class TheirStackScraper:
                         max_age_days,
                         len(seen_ids),
                     )
-                    wresp = requests.post(
+                    wresp = self.session.post(
                         self.api_url,
                         json=wide_payload,
-                        headers=self.headers,
-                        timeout=10,
+                        timeout=self.timeout_precheck,
                     )
                     wresp.raise_for_status()
                     wdata = wresp.json()
@@ -287,11 +326,10 @@ class TheirStackScraper:
                                     len(title_filters),
                                     len(seen_ids),
                                 )
-                                response = requests.post(
+                                response = self.session.post(
                                     self.api_url,
                                     json=payload,
-                                    headers=self.headers,
-                                    timeout=15,
+                                    timeout=self.timeout_paid,
                                 )
                                 response.raise_for_status()
                                 data = response.json()
@@ -434,11 +472,10 @@ class TheirStackScraper:
                     len(title_filters),
                     len(seen_ids),
                 )
-                response = requests.post(
+                response = self.session.post(
                     self.api_url,
                     json=payload,
-                    headers=self.headers,
-                    timeout=15,
+                    timeout=self.timeout_paid,
                 )
                 response.raise_for_status()
                 data = response.json()

@@ -121,13 +121,13 @@ dmypy.json
 # Project-specific ignores
 
 # Development files (keep local only)
-notebooks/
-tests/
-examples/
-deployment/
-scripts/
+/notebooks/
+/tests/
+/examples/
+/deployment/
+/scripts/
 # API/reference docs (do not track)
-docs/reference/*
+/docs/reference/*
 
 # Development tools
 .pre-commit-config.yaml
@@ -135,9 +135,9 @@ requirements-dev.txt
 prompt.txt
 
 # Data files (keep local only)
-data/
-logs/
-backups/
+/data/
+/logs/
+/backups/
 
 # Documentation files (keep local only)
 INTERNAL_NOTES.md

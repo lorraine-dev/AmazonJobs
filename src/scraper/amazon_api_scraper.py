@@ -22,6 +22,8 @@ from typing import Any, Dict, List, Optional, Set
 
 import pandas as pd
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
 from src.scraper.config import ScraperConfig  # type: ignore
@@ -32,6 +34,32 @@ from src.utils.paths import (
 
 
 LOGGER = logging.getLogger(__name__)
+
+
+def create_session(
+    retries: int = 3,
+    backoff_factor: float = 0.5,
+    status_forcelist: tuple = (429, 500, 502, 503, 504),
+) -> requests.Session:
+    """Create a requests Session with retry/backoff configured.
+
+    Retries on common transient errors and 429 rate limiting with exponential backoff.
+    """
+    session = requests.Session()
+    retry = Retry(
+        total=retries,
+        read=retries,
+        connect=retries,
+        backoff_factor=backoff_factor,
+        status_forcelist=status_forcelist,
+        allowed_methods=frozenset(["GET", "POST", "PUT", "DELETE"]),
+        raise_on_status=False,
+        respect_retry_after_header=True,
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+    return session
 
 
 @dataclass
@@ -211,7 +239,12 @@ def sanitize_url_query(url: str) -> str:
         return url
 
 
-def fetch_page(spec: RequestSpec, offset: int, timeout: int = 30) -> Dict[str, Any]:
+def fetch_page(
+    spec: RequestSpec,
+    offset: int,
+    timeout: int = 30,
+    session: Optional[requests.Session] = None,
+) -> Dict[str, Any]:
     url = update_query_param(spec.url, "offset", str(offset))
     try:
         # Sanitize headers for logging (avoid dumping raw Cookie)
@@ -220,7 +253,8 @@ def fetch_page(spec: RequestSpec, offset: int, timeout: int = 30) -> Dict[str, A
             for k, v in spec.headers.items()
         }
         LOGGER.debug("GET %s headers=%s", url, sanitized_headers)
-        resp = requests.get(url, headers=spec.headers, timeout=timeout)
+        http = session or requests
+        resp = http.get(url, headers=spec.headers, timeout=timeout)
         LOGGER.debug(
             "Response status: %s content-type=%s",
             resp.status_code,
@@ -385,9 +419,20 @@ class AmazonAPIScraper:
         result_limit = extract_int_query_param(spec.url, "result_limit", default=10)
         self.logger.info(f"result_limit inferred from URL: {result_limit}")
 
+        # HTTP session with retries/backoff (configurable via common.http_retries/backoff)
+        try:
+            retries = int(self.config.get("common.http_retries") or 3)
+        except Exception:
+            retries = 3
+        try:
+            backoff = float(self.config.get("common.http_backoff") or 0.5)
+        except Exception:
+            backoff = 0.5
+        session = create_session(retries=retries, backoff_factor=backoff)
+
         # Fetch first page to get hits
         self.logger.info("Fetching first page (offset=0)...")
-        first = fetch_page(spec, offset=0, timeout=timeout)
+        first = fetch_page(spec, offset=0, timeout=timeout, session=session)
         hits = int(first.get("hits") or 0)
         self.logger.info(f"Total hits reported: {hits}")
 
@@ -435,7 +480,7 @@ class AmazonAPIScraper:
         page_idx = 1
         while page_idx < pages:
             self.logger.info(f"Fetching page {page_idx+1}/{pages} (offset={offset})...")
-            data = fetch_page(spec, offset=offset, timeout=timeout)
+            data = fetch_page(spec, offset=offset, timeout=timeout, session=session)
             jobs = list(data.get("jobs") or [])
             all_jobs.extend(jobs)
 

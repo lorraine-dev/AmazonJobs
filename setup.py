@@ -38,6 +38,10 @@ setup(
     python_requires=">=3.8",
     install_requires=requirements,
     extras_require={
+        "selenium": [
+            "selenium>=4.8.0",
+            "webdriver-manager>=3.8.0",
+        ],
         "dev": [
             "pytest>=6.0",
             "pytest-cov>=2.0",
@@ -56,4 +60,4 @@ setup(
     package_data={
         "": ["*.yaml", "*.yml", "*.json"],
     },
-) 
+)

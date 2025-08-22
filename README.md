@@ -27,7 +27,8 @@ The dashboard shows:
 
 ## 🛠️ Technology Stack
 
-- **Python** (Pandas, Selenium, Requests, BeautifulSoup, PyYAML, Plotly, python-dotenv, langdetect)
+- **Python** (Pandas, Requests, BeautifulSoup, PyYAML, Plotly, python-dotenv, langdetect)
+- **Optional engine**: Selenium + webdriver-manager (install via extras: `pip install '.[selenium]'`)
 - **Dev/optional**: lxml, nbformat (used for notebooks and optional HTML/XML parsing backends)
 - **GitHub Actions** (automation)
 - **GitHub Pages** (hosting)
@@ -100,6 +101,10 @@ The dashboard shows:
    ```bash
    pip install -r requirements.txt
    ```
+   If you plan to use the Selenium engine, install the optional extras:
+   ```bash
+   pip install '.[selenium]'
+   ```
 3. Create a `.env` file in the repo root (not committed):
    ```env
    THEIR_STACK_API_KEY=your_theirstack_token_here
@@ -131,6 +136,19 @@ The dashboard shows:
 ## ⚙️ Configuration
 
 Edit `config/scraper_config.yaml` to change scraping parameters (e.g., base URL, number of workers).
+
+### HTTP reliability settings
+- `common.http_retries` (default: 3) — Retry count for transient errors (429, 5xx) with exponential backoff.
+- `common.http_backoff` (default: 0.5) — Backoff factor used for retries.
+
+These apply to both Amazon API and TheirStack requests via a shared retrying HTTP session.
+
+### TheirStack request settings
+- `theirstack.timeout_precheck` (default: 10s) — Timeout for the initial free pre-check calls.
+- `theirstack.timeout_paid` (default: 15s) — Timeout for the paid paginated fetch calls.
+- `theirstack.wide_fetch_limit` (default: 10) — Max jobs to fetch in the optional wide pre-check flow when pre-check finds nothing for the last-run window.
+
+All settings are optional; sensible defaults are used if keys are absent.
 
 ---
 

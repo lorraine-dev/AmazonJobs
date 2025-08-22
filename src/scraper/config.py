@@ -202,6 +202,9 @@ class ScraperConfig:
                     "theirstack.max_jobs_per_run": "sources.theirstack.limits.max_jobs_per_run",
                     "theirstack.max_excluded_ids": "sources.theirstack.limits.max_excluded_ids",
                     "theirstack.english_only": "sources.theirstack.english_only",
+                    "theirstack.timeout_precheck": "sources.theirstack.timeout_precheck",
+                    "theirstack.timeout_paid": "sources.theirstack.timeout_paid",
+                    "theirstack.wide_fetch_limit": "sources.theirstack.wide_fetch_limit",
                 }
                 alias_key = alias_map.get(key)
                 if alias_key and alias_key != key:

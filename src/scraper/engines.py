@@ -15,7 +15,6 @@ import pandas as pd
 
 from src.scraper.config import ScraperConfig  # type: ignore
 from src.scraper.amazon_api_scraper import AmazonAPIScraper  # type: ignore
-from src.scraper.amazon_selenium_scraper import AmazonSeleniumScraper  # type: ignore
 
 
 class IAmazonScraper(Protocol):
@@ -45,5 +44,15 @@ def get_amazon_scraper(
     if eng == "api":
         return AmazonAPIScraper(config)
     if eng == "selenium":
+        # Lazy import so core installs don't require selenium deps.
+        try:
+            from src.scraper.amazon_selenium_scraper import (
+                AmazonSeleniumScraper,  # type: ignore
+            )
+        except Exception as e:
+            raise ImportError(
+                "Selenium engine requested but selenium dependencies are missing.\n"
+                "Install extras with: pip install '.[selenium]'"
+            ) from e
         return AmazonSeleniumScraper(config)
     raise ValueError(f"Unknown Amazon engine: {engine}")
