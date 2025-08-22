@@ -169,6 +169,21 @@ All settings are optional; sensible defaults are used if keys are absent.
   - `job-backups`: contents of `data/backups/` (request/response backups)
 - The workflow includes a pre-run check step to ensure `THEIR_STACK_API_KEY` is present.
 
+## 🔄 Dependency updates (Renovate)
+
+- **What it is**: A hosted GitHub App that scans this repo and opens PRs to keep dependencies up to date. Zero runtime/storage footprint in this repo beyond a small config file.
+- **What it does here**:
+  - Monitors `.github/workflows/*.yml` for `uses: owner/repo@...` entries.
+  - Keeps GitHub Actions pinned to commit SHAs for determinism and proposes PRs when the major tag (`v3`, `v4`, ...) advances.
+- **Setup**:
+  1. Install the Renovate GitHub App and grant it access to this repository.
+  2. Ensure `renovate.json` exists at the repo root (already included) with the `github-actions` manager enabled and `pinDigests: true`.
+  3. Renovate will open PRs grouped as "GitHub Actions updates" on the schedule `before 6am on monday`.
+- **Adjust behavior**:
+  - To auto-merge safe updates, set `"automerge": true` in the matching `packageRules`.
+  - To stop pinning to SHAs (not recommended), set `"pinDigests": false`.
+- **Docs**: https://docs.renovatebot.com
+
 ---
 
 ## 🧪 Troubleshooting

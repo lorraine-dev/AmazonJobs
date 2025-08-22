@@ -31,10 +31,10 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@7f4fc3e22c37d6ff65e88745f38bd3157c663f7c # v4
       with:
         python-version: '3.11'
         cache: 'pip'
@@ -56,7 +56,7 @@ jobs:
         fi
 
     - name: Download previous data
-      uses: dawidd6/action-download-artifact@v3
+      uses: dawidd6/action-download-artifact@09f2f74827fd3a8607589e5ad7f9398816f540fe # v3
       with:
         name: job-data
         path: data/raw/
@@ -65,7 +65,7 @@ jobs:
       continue-on-error: true
 
     - name: Download previous state
-      uses: dawidd6/action-download-artifact@v3
+      uses: dawidd6/action-download-artifact@09f2f74827fd3a8607589e5ad7f9398816f540fe # v3
       with:
         name: job-state
         path: .
@@ -118,7 +118,7 @@ jobs:
 
     - name: Upload job data
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
       with:
         name: job-data
         path: data/raw/
@@ -126,7 +126,7 @@ jobs:
 
     - name: Upload scraper logs
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
       with:
         name: logs
         path: logs/
@@ -135,7 +135,7 @@ jobs:
 
     - name: Upload scraper state
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
       with:
         name: job-state
         path: theirstack_state.json
@@ -144,7 +144,7 @@ jobs:
 
     - name: Upload backups (optional)
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
       with:
         name: job-backups
         path: data/backups/
@@ -156,16 +156,16 @@ jobs:
         python -m src.utils.data_processor
 
     - name: Setup Pages
-      uses: actions/configure-pages@v4
+      uses: actions/configure-pages@1f0c5cde4bc74cd7e1254d0cb4de8d49e9068c7d # v4
 
     - name: Upload artifact
-      uses: actions/upload-pages-artifact@v3
+      uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
       with:
         path: ./docs
 
     - name: Deploy to GitHub Pages
       id: deployment
-      uses: actions/deploy-pages@v4
+      uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
 
     - name: Notify on success
       if: success()
