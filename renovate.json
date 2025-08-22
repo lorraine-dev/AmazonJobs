@@ -13,8 +13,16 @@
     {
       "matchManagers": ["pip_requirements"],
       "matchFileNames": ["constraints.txt"],
-      "groupName": "Python dependencies updates",
-      "groupSlug": "python-deps",
+      "groupName": "Python dependencies (API)",
+      "groupSlug": "python-deps-api",
+      "rangeStrategy": "replace",
+      "automerge": false
+    },
+    {
+      "matchManagers": ["pip_requirements"],
+      "matchFileNames": ["constraints-selenium.txt"],
+      "groupName": "Python dependencies (Selenium)",
+      "groupSlug": "python-deps-selenium",
       "rangeStrategy": "replace",
       "automerge": false
     },
