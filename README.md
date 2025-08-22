@@ -51,7 +51,7 @@ The dashboard shows:
 │   └── reference/                           # API/reference assets
 ├── src/
 │   ├── scraper/
-│   │   ├── amazon_scraper.py                # Legacy/simple Amazon scraper
+│   │   ├── amazon_scraper.py                # Delegator: selects engine (api|selenium) and forwards run()
 │   │   ├── amazon_api_scraper.py            # Amazon Jobs API scraper
 │   │   ├── amazon_selenium_scraper.py       # Amazon Selenium scraper
 │   │   ├── theirstack_scraper.py            # TheirStack API scraper
