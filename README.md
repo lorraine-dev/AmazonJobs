@@ -186,6 +186,52 @@ All settings are optional; sensible defaults are used if keys are absent.
 
 ---
 
+## 📦 Deterministic Python dependencies (constraints + Renovate)
+
+This repo uses a constraints-based strategy to keep Python installs deterministic and upgrades safe.
+
+### What we implemented
+
+- **Constraints file**: `constraints.txt` lists exact versions for runtime deps (pandas, requests, bs4, PyYAML, plotly, python-dotenv, langdetect). CI uses these pins for reproducible installs.
+- **Workflow install with constraints**: `.github/workflows/scraper.yml` now installs via:
+  - `python -m pip install -U pip setuptools wheel` (ensure modern tooling)
+  - `python -m pip install -r requirements.txt -c constraints.txt` (exactly pinned set)
+  - Optional Selenium extras install respects constraints when possible and falls back if extras aren’t pinned there.
+- **Caching aware of constraints**: `actions/setup-python` pip cache keys include both `requirements.txt` and `constraints.txt` to improve cache hit rate when pins change.
+- **Renovate for Python deps**: `renovate.json` enables the `pip_requirements` manager for `constraints.txt` and groups PRs as "Python dependencies updates" on the same weekly schedule. Renovate does not touch `requirements.txt` (kept as lower bounds for humans).
+
+### Why this helps
+
+- **Reproducibility**: CI always installs the same versions → fewer surprise breakages from upstream releases.
+- **Safer updates**: Renovate PRs propose pin bumps in `constraints.txt`. CI verifies the exact set before merge.
+- **Performance**: Better pip cache because cache keys include the constraints file; minor speedups from disabling pip version check and pre-upgrading build tools.
+
+### How to work locally
+
+- Normal install (uses the latest compatible versions within lower bounds):
+  ```bash
+  pip install -r requirements.txt
+  ```
+- Reproduce CI exactly (use pinned versions):
+  ```bash
+  pip install -r requirements.txt -c constraints.txt
+  ```
+- Selenium extras (optional):
+  ```bash
+  pip install '.[selenium]'
+  # To follow CI pins when available:
+  # pip install '.[selenium]' -c constraints.txt || pip install '.[selenium]'
+  ```
+
+### Renovate PRs you’ll see
+
+- "GitHub Actions updates" — updates to Actions pinned SHAs.
+- "Python dependencies updates" — updates to `constraints.txt` pins.
+
+Review and merge when CI is green. If an update causes issues, revert the PR or pin back in `constraints.txt`.
+
+---
+
 ## 🧪 Troubleshooting
 
 - **Secret missing**: Workflow fails at step "Check TheirStack secret presence". Add `THEIR_STACK_API_KEY` in repo Settings.

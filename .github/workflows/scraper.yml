@@ -38,7 +38,9 @@ jobs:
       with:
         python-version: '3.11'
         cache: 'pip'
-        cache-dependency-path: requirements.txt
+        cache-dependency-path: |
+          requirements.txt
+          constraints.txt
 
     - name: Install Chrome
       if: ${{ env.AMAZON_ENGINE == 'selenium' }}
@@ -47,12 +49,14 @@ jobs:
         sudo apt-get install -y google-chrome-stable
 
     - name: Install dependencies
+      env:
+        PIP_DISABLE_PIP_VERSION_CHECK: '1'
       run: |
-        pip install --upgrade pip
-        pip install -r requirements.txt
+        python -m pip install -U pip setuptools wheel
+        python -m pip install -r requirements.txt -c constraints.txt
         if [ "$AMAZON_ENGINE" = "selenium" ]; then
           echo "Installing selenium optional dependencies..."
-          pip install '.[selenium]'
+          python -m pip install '.[selenium]' -c constraints.txt || python -m pip install '.[selenium]'
         fi
 
     - name: Download previous data
