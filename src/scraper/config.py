@@ -255,7 +255,7 @@ class ScraperConfig:
         Path(save_path).parent.mkdir(parents=True, exist_ok=True)
 
         with open(save_path, "w") as f:
-            yaml.dump(self._config, f, default_flow_style=False, indent=2)
+            yaml.safe_dump(self._config, f, default_flow_style=False, indent=2)
 
     def __str__(self) -> str:
         """String representation of configuration."""

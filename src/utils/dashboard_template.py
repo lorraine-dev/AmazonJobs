@@ -4,6 +4,7 @@ Separated from data_processor.py for better modularity.
 """
 
 from typing import List
+from html import escape
 
 
 def generate_dashboard_html_template(
@@ -36,7 +37,10 @@ def generate_dashboard_html_template(
         A complete HTML string for the dashboard.
     """
     category_options = "".join(
-        [f'<option value="{cat}">{cat}</option>' for cat in job_categories]
+        [
+            f'<option value="{escape(str(cat), quote=True)}">{escape(str(cat))}</option>'
+            for cat in job_categories
+        ]
     )
     # role_options = "".join([f'<option value="{r}">{r}</option>' for r in roles])
     # team_options = "".join([f'<option value="{t}">{t}</option>' for t in teams])
@@ -44,8 +48,9 @@ def generate_dashboard_html_template(
     # Convert skills_data and category_job_counts to JSON for JavaScript
     import json
 
-    skills_data_json = json.dumps(skills_data)
-    category_job_counts_json = json.dumps(category_job_counts)
+    # Escape closing tags to prevent </script> breaking out of the script block
+    skills_data_json = json.dumps(skills_data).replace("</", "<\\/")
+    category_job_counts_json = json.dumps(category_job_counts).replace("</", "<\\/")
 
     # Generate the initial HTML for the skills list (for all categories)
     total_jobs_for_all = category_job_counts.get("All Categories", 0)
@@ -148,6 +153,15 @@ def generate_dashboard_html_template(
         const skillsPerPage = 10;
         let currentPage = 1;
 
+        function escapeHtml(str) {{
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#39;");
+        }}
+
         function generateSkillsHtml(skills, totalJobs, page) {{
             if (!skills || skills.length === 0 || totalJobs === 0) {{
                 return '<p>No specific skills found for this category.</p>';
@@ -160,6 +174,7 @@ def generate_dashboard_html_template(
             let html = '<div class="skills-grid">';
             skillsToDisplay.forEach(skill => {{
                 const name = skill[0];
+                const safeName = escapeHtml(name);
                 const counts = skill[1];
                 const total = counts.basic_count + counts.preferred_count;
                 const basicPercentage = (counts.basic_count / totalJobs) * 100;
@@ -168,7 +183,7 @@ def generate_dashboard_html_template(
 
                 html += `
                     <div class="skill-item">
-                        <span class="skill-name">${{name}}</span>
+                        <span class="skill-name">${{safeName}}</span>
                         <div class="skill-bar-container">
                             <div class="skill-bar-basic" style="width: ${{basicPercentage.toFixed(1)}}%;"></div>
                             <div class="skill-bar-preferred" style="width: ${{preferredPercentage.toFixed(1)}}%;"></div>
@@ -223,7 +238,7 @@ def _generate_skills_html(skills_list: List, total_jobs_in_category: int) -> str
         total_percentage = basic_percentage + preferred_percentage
         html += f"""
             <div class="skill-item">
-                <span class="skill-name">{skill}</span>
+                <span class="skill-name">{escape(str(skill))}</span>
                 <div class="skill-bar-container">
                     <div class="skill-bar-basic" style="width: {basic_percentage:.1f}%;"></div>
                     <div class="skill-bar-preferred" style="width: {preferred_percentage:.1f}%;"></div>

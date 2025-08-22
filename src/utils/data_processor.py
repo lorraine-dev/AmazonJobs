@@ -8,6 +8,8 @@ import pandas as pd
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
+from html import escape
+from urllib.parse import urlparse
 
 # Import the new template function
 from .dashboard_template import generate_dashboard_html_template
@@ -43,6 +45,28 @@ def _coerce_active_column(series: pd.Series) -> pd.Series:
     return mapped.fillna(True).astype(bool)
 
 
+def _escape_html_text(text: str) -> str:
+    """Escape text for safe HTML rendering, preserving basic newlines as <br>."""
+    if text is None:
+        return ""
+    # escape quotes only where needed in attributes; for text nodes quote=False is fine
+    return escape(str(text), quote=False).replace("\n", "<br>")
+
+
+def _safe_http_url(url: str) -> str:
+    """Return a safe http(s) URL for href, or '#' if invalid."""
+    if not url:
+        return "#"
+    try:
+        parsed = urlparse(str(url))
+        if parsed.scheme in ("http", "https"):
+            # Basic attribute escaping; quotes should be escaped in attributes
+            return escape(url, quote=True)
+        return "#"
+    except Exception:
+        return "#"
+
+
 def _generate_table_rows(df: pd.DataFrame) -> str:
     """
     Generates the HTML table rows from the DataFrame.
@@ -74,32 +98,34 @@ def _generate_table_rows(df: pd.DataFrame) -> str:
         status_class = "active" if active_status else "inactive"
         status_text = "Active" if active_status else "Inactive"
 
-        # Create job URL (fallback to 'url' if 'job_url' missing)
-        job_url = row.get("job_url") or row.get("url") or ""
+        # Create job URL (fallback to 'url' if 'job_url' missing) and validate scheme
+        raw_job_url = row.get("job_url") or row.get("url") or ""
+        job_url = _safe_http_url(raw_job_url)
 
         # Display the job TITLE (not role/seniority) for all sources
         link_text = row.get("title") or row.get("role", "N/A")
+        safe_link_text = _escape_html_text(link_text)
         role_link = (
-            f'<a href="{job_url}" target="_blank" class="job-url">{link_text}</a>'
-            if job_url
-            else link_text
+            f'<a href="{job_url}" target="_blank" rel="noopener" class="job-url">{safe_link_text}</a>'
+            if job_url and job_url != "#"
+            else safe_link_text
         )
 
         # Extract description and qualifications, handling potential NaN
         description = (
-            str(row.get("description", "N/A"))
+            _escape_html_text(row.get("description", "N/A"))
             if pd.notna(row.get("description"))
-            else "N/A"
+            else _escape_html_text("N/A")
         )
         basic_qual = (
-            str(row.get("basic_qual", "N/A"))
+            _escape_html_text(row.get("basic_qual", "N/A"))
             if pd.notna(row.get("basic_qual"))
-            else "N/A"
+            else _escape_html_text("N/A")
         )
         pref_qual = (
-            str(row.get("pref_qual", "N/A"))
+            _escape_html_text(row.get("pref_qual", "N/A"))
             if pd.notna(row.get("pref_qual"))
-            else "N/A"
+            else _escape_html_text("N/A")
         )
 
         # We will use a single row for both summary and details.
@@ -119,9 +145,9 @@ def _generate_table_rows(df: pd.DataFrame) -> str:
                         <p>{pref_qual}</p>
                     </div>
                 </td>
-                <td>{row.get('company', 'N/A')}</td>
-                <td>{row.get('job_category', 'N/A')}</td>
-                <td>{posting_date}</td>
+                <td>{_escape_html_text(row.get('company', 'N/A'))}</td>
+                <td>{_escape_html_text(row.get('job_category', 'N/A'))}</td>
+                <td>{_escape_html_text(posting_date)}</td>
                 <td class="{status_class}">{status_text}</td>
             </tr>
         """
@@ -235,6 +261,7 @@ def csv_to_html_table(csv_path: str, output_path: Optional[str] = None) -> str:
 def create_error_html(message: str) -> str:
     """Create error HTML when data loading fails."""
 
+    safe_message = _escape_html_text(message)
     return f"""
 <!DOCTYPE html>
 <html lang="en">
@@ -275,7 +302,7 @@ def create_error_html(message: str) -> str:
     <div class="error-container">
         <div class="error-icon">⚠️</div>
         <h2>Dashboard Error</h2>
-        <p class="error-message">{message}</p>
+        <p class="error-message">{safe_message}</p>
         <p>Please check the scraper logs for more information.</p>
     </div>
 </body>
