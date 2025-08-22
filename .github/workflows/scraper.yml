@@ -41,6 +41,7 @@ jobs:
         cache-dependency-path: |
           requirements.txt
           constraints.txt
+          constraints-selenium.txt
 
     - name: Install Chrome
       if: ${{ env.AMAZON_ENGINE == 'selenium' }}
@@ -53,10 +54,14 @@ jobs:
         PIP_DISABLE_PIP_VERSION_CHECK: '1'
       run: |
         python -m pip install -U pip setuptools wheel
-        python -m pip install -r requirements.txt -c constraints.txt
         if [ "$AMAZON_ENGINE" = "selenium" ]; then
+          echo "Installing runtime with Selenium constraints..."
+          python -m pip install -r requirements.txt -c constraints-selenium.txt
           echo "Installing selenium optional dependencies..."
-          python -m pip install '.[selenium]' -c constraints.txt || python -m pip install '.[selenium]'
+          python -m pip install '.[selenium]' -c constraints-selenium.txt
+        else
+          echo "Installing runtime with API constraints..."
+          python -m pip install -r requirements.txt -c constraints.txt
         fi
 
     - name: Download previous data

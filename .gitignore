@@ -36,6 +36,7 @@ pip-log.txt
 pip-delete-this-directory.txt
 
 # Unit test / coverage reports
+.github/workflows/tests.yml
 htmlcov/
 .tox/
 .nox/
@@ -121,8 +122,8 @@ dmypy.json
 # Project-specific ignores
 
 # Development files (keep local only)
+/tests
 /notebooks/
-/tests/
 /examples/
 /deployment/
 /scripts/

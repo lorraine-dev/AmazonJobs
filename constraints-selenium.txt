@@ -1,0 +1,21 @@
+# Exact pins for Selenium-enabled installs (compatible with Python 3.11)
+# Intended for use when AMAZON_ENGINE=selenium or when running Selenium locally
+
+# Core runtime (keep aligned with requirements.txt unless intentionally bumped)
+pandas==1.5.0
+numpy==1.24.4  # Compatible with pandas 1.5 and Python 3.11
+PyYAML==6.0
+plotly==5.13.0
+python-dotenv==1.0.0
+beautifulsoup4==4.11.0
+langdetect==1.0.9
+
+# HTTP stack (Selenium requires urllib3>=2)
+requests==2.32.3
+urllib3==2.5.0
+charset-normalizer==3.4.0
+idna==3.10
+certifi==2025.8.3
+
+# Selenium
+selenium==4.34.2

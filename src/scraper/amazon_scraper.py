@@ -3,10 +3,12 @@ Main Amazon Jobs Scraper class
 """
 
 import os
+import re
 import logging
+from datetime import datetime
 import pandas as pd
 from pathlib import Path
-from typing import Optional, Any
+from typing import Optional, Any, Tuple
 
 from .config import ScraperConfig
 from src.scraper.engines import get_amazon_scraper  # type: ignore
@@ -104,6 +106,47 @@ class AmazonJobsScraper:
             save_raw=save_raw,
             **kwargs,
         )
+
+    # --- Helpers expected by legacy tests ---
+    def extract_role_and_team(self, title: str) -> Tuple[str, str]:
+        """Split a combined title like 'Role, Team' or 'Role - Team'.
+
+        Returns (role, team). If no separator found, returns (title, '').
+        """
+        text = (title or "").strip()
+        if not text:
+            return "", ""
+        # Try common separators first for readability
+        for sep in [",", " - ", " – ", " — "]:
+            if sep in text:
+                left, right = text.split(sep, 1)
+                return left.strip(), right.strip()
+        # Fallback: split on any dash/comma pattern
+        parts = re.split(r"\s*[,–—-]\s+", text, maxsplit=1)
+        if len(parts) == 2:
+            return parts[0].strip(), parts[1].strip()
+        return text, ""
+
+    def parse_posting_date(self, date_text: str):
+        """Parse a human-readable date like 'July 24, 2025' into a date.
+
+        Returns a datetime.date on success, or None if parsing fails.
+        """
+        if not date_text:
+            return None
+        s = date_text.strip()
+        formats = [
+            "%B %d, %Y",  # July 24, 2025
+            "%b %d, %Y",  # Jul 24, 2025
+            "%Y-%m-%d",  # 2025-07-24
+            "%m/%d/%Y",  # 07/24/2025
+        ]
+        for fmt in formats:
+            try:
+                return datetime.strptime(s, fmt).date()
+            except Exception:
+                continue
+        return None
 
     def __enter__(self):
         """Context manager entry."""

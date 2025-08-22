@@ -97,14 +97,20 @@ The dashboard shows:
 ### Run Locally (Advanced)
 
 1. Clone the repository.
-2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-   If you plan to use the Selenium engine, install the optional extras:
-   ```bash
-   pip install '.[selenium]'
-   ```
+2. Install dependencies (choose a mode):
+
+   - API engine (minimum-supported, deterministic like CI):
+     ```bash
+     # Create/activate venv first
+     pip install -r requirements.txt -c constraints.txt
+     pip install -r requirements-dev.txt
+     ```
+
+   - Selenium engine (separate venv recommended):
+     ```bash
+     # Create/activate a separate venv for Selenium
+     pip install -r requirements.txt -c constraints-selenium.txt '.[selenium]'
+     ```
 3. Create a `.env` file in the repo root (not committed):
    ```env
    THEIR_STACK_API_KEY=your_theirstack_token_here
@@ -192,11 +198,13 @@ This repo uses a constraints-based strategy to keep Python installs deterministi
 
 ### What we implemented
 
-- **Constraints file**: `constraints.txt` lists exact versions for runtime deps (pandas, requests, bs4, PyYAML, plotly, python-dotenv, langdetect). CI uses these pins for reproducible installs.
-- **Workflow install with constraints**: `.github/workflows/scraper.yml` now installs via:
-  - `python -m pip install -U pip setuptools wheel` (ensure modern tooling)
-  - `python -m pip install -r requirements.txt -c constraints.txt` (exactly pinned set)
-  - Optional Selenium extras install respects constraints when possible and falls back if extras aren’t pinned there.
+- **Constraints files**:
+  - `constraints.txt` — exact pins for the API engine path (minimum-supported baseline used in CI).
+  - `constraints-selenium.txt` — exact pins compatible with the Selenium engine (`urllib3>=2`, `requests 2.32.x`). Use this when running Selenium locally or in production.
+- **Workflow install with constraints**: CI installs via:
+  - `python -m pip install -U pip setuptools wheel`
+  - `python -m pip install -r requirements.txt -c constraints.txt`
+  - Note: Selenium is optional and installed only when explicitly selected (see Usage).
 - **Caching aware of constraints**: `actions/setup-python` pip cache keys include both `requirements.txt` and `constraints.txt` to improve cache hit rate when pins change.
 - **Renovate for Python deps**: `renovate.json` enables the `pip_requirements` manager for `constraints.txt` and groups PRs as "Python dependencies updates" on the same weekly schedule. Renovate does not touch `requirements.txt` (kept as lower bounds for humans).
 
@@ -208,20 +216,16 @@ This repo uses a constraints-based strategy to keep Python installs deterministi
 
 ### How to work locally
 
-- Normal install (uses the latest compatible versions within lower bounds):
-  ```bash
-  pip install -r requirements.txt
-  ```
-- Reproduce CI exactly (use pinned versions):
+- API engine (baseline like CI):
   ```bash
   pip install -r requirements.txt -c constraints.txt
+  pip install -r requirements-dev.txt
   ```
-- Selenium extras (optional):
+- Selenium engine (separate venv recommended):
   ```bash
-  pip install '.[selenium]'
-  # To follow CI pins when available:
-  # pip install '.[selenium]' -c constraints.txt || pip install '.[selenium]'
+  pip install -r requirements.txt -c constraints-selenium.txt '.[selenium]'
   ```
+  If you previously installed Selenium into the API venv and hit `urllib3` conflicts, uninstall it there or recreate the venv.
 
 ### Renovate PRs you’ll see
 

@@ -12,30 +12,61 @@ def _cfg(config: Optional[ScraperConfig]) -> ScraperConfig:
     return config or ScraperConfig()
 
 
+def _resolve_rel(c: ScraperConfig, p: str) -> Path:
+    """Resolve a possibly-relative path against the config file directory.
+
+    If "p" is absolute, return it as-is. If it's relative, interpret it
+    relative to the directory containing the active YAML config file.
+    """
+    path = Path(p)
+    if path.is_absolute():
+        return path
+    base = Path(".")
+    if getattr(c, "config_path", None):
+        cfg_dir = Path(c.config_path).parent
+        # If config file is under a 'config/' directory, treat its parent as project root
+        base = cfg_dir.parent if cfg_dir.name == "config" else cfg_dir
+    return base / path
+
+
 def get_raw_dir(config: Optional[ScraperConfig] = None) -> Path:
     c = _cfg(config)
-    # Prefer new schema
+    # If legacy paths explicitly present in YAML, prefer them
+    cfg_map = getattr(c, "_config", {}) or {}
+    legacy_out = cfg_map.get("output", {}) if isinstance(cfg_map, dict) else {}
+    if isinstance(legacy_out, dict) and "data_dir" in legacy_out:
+        return _resolve_rel(c, legacy_out.get("data_dir", "data/raw"))
+    # Otherwise use new schema, falling back to default
     raw_dir = c.get("common.paths.raw_dir")
     if raw_dir:
-        return Path(raw_dir)
-    # Fallback to legacy
-    return Path(c.get("output.data_dir", "data/raw"))
+        return _resolve_rel(c, raw_dir)
+    return _resolve_rel(c, "data/raw")
 
 
 def get_backup_dir(config: Optional[ScraperConfig] = None) -> Path:
     c = _cfg(config)
+    cfg_map = getattr(c, "_config", {}) or {}
+    legacy_out = cfg_map.get("output", {}) if isinstance(cfg_map, dict) else {}
+    if isinstance(legacy_out, dict) and "backup_dir" in legacy_out:
+        return _resolve_rel(c, legacy_out.get("backup_dir", "data/backups"))
     backup_dir = c.get("common.paths.backup_dir")
     if backup_dir:
-        return Path(backup_dir)
-    return Path(c.get("output.backup_dir", "data/backups"))
+        return _resolve_rel(c, backup_dir)
+    return _resolve_rel(c, "data/backups")
 
 
 def get_combined_file(config: Optional[ScraperConfig] = None) -> Path:
     c = _cfg(config)
+    cfg_map = getattr(c, "_config", {}) or {}
+    legacy_out = cfg_map.get("output", {}) if isinstance(cfg_map, dict) else {}
+    if isinstance(legacy_out, dict) and "combined_file" in legacy_out:
+        return _resolve_rel(
+            c, legacy_out.get("combined_file", "data/processed/combined_jobs.csv")
+        )
     combined = c.get("common.paths.combined_file")
     if combined:
-        return Path(combined)
-    return Path(c.get("output.combined_file", "data/processed/combined_jobs.csv"))
+        return _resolve_rel(c, combined)
+    return _resolve_rel(c, "data/processed/combined_jobs.csv")
 
 
 def get_raw_filename(source: str, config: Optional[ScraperConfig] = None) -> str:

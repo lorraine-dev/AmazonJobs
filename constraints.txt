@@ -1,6 +1,7 @@
 # Exact pins for deterministic CI installs
 # These correspond to the lower bounds in requirements.txt
 pandas==1.5.0
+numpy==1.24.4  # Compatible with pandas 1.5 and Python 3.11; avoids ABI issues with NumPy 2.x
 requests==2.28.0
 beautifulsoup4==4.11.0
 PyYAML==6.0
