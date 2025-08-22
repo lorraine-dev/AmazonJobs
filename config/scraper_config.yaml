@@ -8,6 +8,12 @@ common:
     file: "logs/scraper.log"
     format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
+  # HTTP reliability (optional; defaults used if omitted)
+  # http_retries: 3     # Retries on transient errors (429, 5xx)
+  # http_backoff: 0.5   # Exponential backoff factor for retries
+  # http_min_interval_seconds: 0.0  # Optional min delay between page requests
+  # http_jitter_seconds: 0.0        # Optional extra random delay (0..jitter)
+
 sources:
   amazon:
     enabled: true
@@ -91,4 +97,8 @@ sources:
       page_size: 50
       max_jobs_per_run: 50
       max_excluded_ids: 200
+    # Request timeouts and optional wide pre-check (optional)
+    # timeout_precheck: 10   # seconds for initial free pre-check
+    # timeout_paid: 15       # seconds for paid paginated fetches
+    # wide_fetch_limit: 10   # cap on wide-window fetch when narrow pre-check returns 0
     raw_filename: "theirstack_jobs.csv"

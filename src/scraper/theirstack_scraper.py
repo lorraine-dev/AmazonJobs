@@ -8,6 +8,8 @@ from datetime import datetime, timedelta
 import logging
 from pathlib import Path
 import json
+import time
+import random
 
 from src.utils.theirstack_state import TheirStackState  # type: ignore
 from src.scraper.config import ScraperConfig  # type: ignore
@@ -83,6 +85,18 @@ class TheirStackScraper:
             self.timeout_paid = int(self.config.get("theirstack.timeout_paid") or 15)
         except Exception:
             self.timeout_paid = 15
+
+        # Optional rate limiting between requests
+        try:
+            self.min_interval = float(
+                self.config.get("common.http_min_interval_seconds") or 0.0
+            )
+        except Exception:
+            self.min_interval = 0.0
+        try:
+            self.jitter = float(self.config.get("common.http_jitter_seconds") or 0.0)
+        except Exception:
+            self.jitter = 0.0
 
     def _load_external_titles(self) -> List[str]:
         """Load additional job titles from config/theirstack_titles.json if present.
@@ -402,6 +416,17 @@ class TheirStackScraper:
                                     )
                                     break
                                 page += 1
+                                # Sleep between requests if configured
+                                if self.min_interval > 0:
+                                    delay = self.min_interval + (
+                                        random.uniform(0, self.jitter)
+                                        if self.jitter > 0
+                                        else 0.0
+                                    )
+                                    self.logger.debug(
+                                        f"[wide] Sleeping {delay:.2f}s before next page request"
+                                    )
+                                    time.sleep(delay)
                             except Exception as fe:
                                 self.logger.error("[wide] Error fetching jobs: %s", fe)
                                 break
@@ -537,6 +562,14 @@ class TheirStackScraper:
                         current_limit,
                     )
                     break
+
+                # Sleep between requests if configured
+                if self.min_interval > 0:
+                    delay = self.min_interval + (
+                        random.uniform(0, self.jitter) if self.jitter > 0 else 0.0
+                    )
+                    self.logger.debug(f"Sleeping {delay:.2f}s before next page request")
+                    time.sleep(delay)
 
                 page += 1
             except Exception as e:

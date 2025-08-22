@@ -25,6 +25,8 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+import time
+import random
 
 from src.scraper.config import ScraperConfig  # type: ignore
 from src.utils.paths import (
@@ -475,6 +477,18 @@ class AmazonAPIScraper:
             f"Planned pages to fetch: {pages} (total available: {total_pages})"
         )
 
+        # Optional rate limiting between requests
+        try:
+            min_interval = float(
+                self.config.get("common.http_min_interval_seconds") or 0.0
+            )
+        except Exception:
+            min_interval = 0.0
+        try:
+            jitter = float(self.config.get("common.http_jitter_seconds") or 0.0)
+        except Exception:
+            jitter = 0.0
+
         # Fetch remaining pages
         offset = result_limit
         page_idx = 1
@@ -492,6 +506,17 @@ class AmazonAPIScraper:
             if not jobs:
                 self.logger.info("No jobs returned; stopping early.")
                 break
+
+            # Sleep between requests if configured
+            if min_interval > 0:
+                delay = min_interval + (
+                    random.uniform(0, jitter) if jitter > 0 else 0.0
+                )
+                self.logger.debug(f"Sleeping {delay:.2f}s before next page request")
+                time.sleep(delay)
+
+            offset += result_limit
+            page_idx += 1
 
             # Per-page metrics and duplicate tracking (by numeric job id when available)
             new_ids = [_job_key(j) for j in jobs]

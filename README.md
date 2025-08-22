@@ -143,6 +143,12 @@ Edit `config/scraper_config.yaml` to change scraping parameters (e.g., base URL,
 
 These apply to both Amazon API and TheirStack requests via a shared retrying HTTP session.
 
+### Rate limiting (optional)
+- `common.http_min_interval_seconds` (default: 0.0) — Minimum delay between paginated requests.
+- `common.http_jitter_seconds` (default: 0.0) — Extra random delay added on top of `min_interval` (uniform in [0, jitter]).
+
+If set, these throttle page-by-page calls in both scrapers to avoid rate limits.
+
 ### TheirStack request settings
 - `theirstack.timeout_precheck` (default: 10s) — Timeout for the initial free pre-check calls.
 - `theirstack.timeout_paid` (default: 15s) — Timeout for the paid paginated fetch calls.
