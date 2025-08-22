@@ -77,10 +77,10 @@ class TheirStackScraper:
         # Timeouts (seconds)
         try:
             self.timeout_precheck = int(
-                self.config.get("theirstack.timeout_precheck") or 10
+                self.config.get("theirstack.timeout_precheck") or 25
             )
         except Exception:
-            self.timeout_precheck = 10
+            self.timeout_precheck = 25
         try:
             self.timeout_paid = int(self.config.get("theirstack.timeout_paid") or 15)
         except Exception:
@@ -244,10 +244,11 @@ class TheirStackScraper:
                 len(seen_ids),
                 seen_preview,
             )
+            start_ts = time.monotonic()
             response = self.session.post(
                 self.api_url,
                 json=check_payload,
-                timeout=self.timeout_precheck,
+                timeout=(5, self.timeout_precheck),
             )
             response.raise_for_status()
             data = response.json()
@@ -257,7 +258,10 @@ class TheirStackScraper:
             total_jobs = int(
                 (meta_obj.get("total_results") or meta_obj.get("total") or 0) or 0
             )
-            self.logger.info("Pre-check total_results=%d", total_jobs)
+            duration = time.monotonic() - start_ts
+            self.logger.info(
+                "Pre-check total_results=%d duration=%.2fs", total_jobs, duration
+            )
             if total_jobs == 0:
                 self.logger.info(
                     "No new jobs via pre-check; skipping full request. (posted_at_gte=%s, max_age_days=%d, exclude_ids=%d)",
@@ -283,7 +287,7 @@ class TheirStackScraper:
                     wresp = self.session.post(
                         self.api_url,
                         json=wide_payload,
-                        timeout=self.timeout_precheck,
+                        timeout=(5, self.timeout_precheck),
                     )
                     wresp.raise_for_status()
                     wdata = wresp.json()
@@ -455,6 +459,90 @@ class TheirStackScraper:
                     "Pre-check and wide pre-check found no new jobs or wide fetch skipped; returning 0 jobs."
                 )
                 return []
+        except requests.exceptions.ReadTimeout as e:
+            # Fallback: attempt a limited paid fetch to avoid missing jobs due to transient slowness
+            self.logger.warning(
+                f"Pre-check read timeout after {self.timeout_precheck}s: {e}. Proceeding with limited paid fetch fallback."
+            )
+            try:
+                # Determine a small fallback target
+                try:
+                    fallback_limit = int(
+                        self.config.get("theirstack.wide_fetch_limit") or 10
+                    )
+                except Exception:
+                    fallback_limit = 10
+                fallback_limit = max(1, fallback_limit)
+
+                page_size = int(self.config.get("theirstack.page_size"))
+                current_limit = min(page_size, fallback_limit)
+
+                payload = {
+                    "posted_at_gte": posted_at_gte,
+                    "job_country_code_or": country_codes,
+                    "posted_at_max_age_days": max_age_days,
+                    "job_title_or": title_filters,
+                    "limit": current_limit,
+                    "page": 0,
+                    "job_id_not": seen_ids,
+                    "order_by": [{"desc": True, "field": "date_posted"}],
+                    "property_exists_or": ["final_url"],
+                }
+                self.logger.info(
+                    "[fallback] Sending limited paid fetch: limit=%d posted_at_gte=%s titles=%d exclude_ids=%d",
+                    current_limit,
+                    posted_at_gte,
+                    len(title_filters),
+                    len(seen_ids),
+                )
+                resp = self.session.post(
+                    self.api_url,
+                    json=payload,
+                    timeout=(5, self.timeout_paid),
+                )
+                resp.raise_for_status()
+                fdata = resp.json()
+                self._save_response_backup("page_fallback", fdata, payload, page=0)
+
+                jobs = fdata.get("data", [])
+                if not jobs:
+                    self.logger.info(
+                        "[fallback] No jobs returned on limited paid fetch."
+                    )
+                    return []
+
+                # Filter new and English-only if configured
+                page_new_jobs = [
+                    job for job in jobs if self.state.is_job_new(str(job["id"]))
+                ]
+                english_only = bool(self.config.get("theirstack.english_only"))
+                if english_only:
+                    before_cnt = len(page_new_jobs)
+                    page_new_jobs = [j for j in page_new_jobs if job_is_english(j)]
+                    self.logger.info(
+                        "[fallback] English filter kept %d/%d",
+                        len(page_new_jobs),
+                        before_cnt,
+                    )
+
+                # Persist state and process
+                for job in page_new_jobs:
+                    self.state.add_job_id(str(job["id"]))
+                self.state.update_last_run()
+                self.state.save_state()
+
+                from src.scraper.theirstack_processor import process_theirstack_jobs
+
+                process_theirstack_jobs(page_new_jobs)
+                self.logger.info(
+                    "[fallback] Completed limited paid fetch: returned=%d new=%d",
+                    len(jobs),
+                    len(page_new_jobs),
+                )
+                return page_new_jobs
+            except Exception as fe:
+                self.logger.error(f"[fallback] Failed limited paid fetch: {fe}")
+                return []
         except Exception as e:
             self.logger.error(f"Pre-check request failed: {e}")
             return []
@@ -500,7 +588,7 @@ class TheirStackScraper:
                 response = self.session.post(
                     self.api_url,
                     json=payload,
-                    timeout=self.timeout_paid,
+                    timeout=(5, self.timeout_paid),
                 )
                 response.raise_for_status()
                 data = response.json()
