@@ -110,22 +110,32 @@ def _generate_table_rows(df: pd.DataFrame) -> str:
             else safe_link_text
         )
 
-        # Extract description and qualifications, handling potential NaN
+        # Extract description and structured fields with legacy fallbacks, handling NaN/empty
         description = (
             _escape_html_text(row.get("description", "N/A"))
             if pd.notna(row.get("description"))
             else _escape_html_text("N/A")
         )
-        basic_qual = (
-            _escape_html_text(row.get("basic_qual", "N/A"))
-            if pd.notna(row.get("basic_qual"))
-            else _escape_html_text("N/A")
-        )
-        pref_qual = (
-            _escape_html_text(row.get("pref_qual", "N/A"))
-            if pd.notna(row.get("pref_qual"))
-            else _escape_html_text("N/A")
-        )
+        basic_src = row.get("basic_qualifications", row.get("basic_qual", ""))
+        pref_src = row.get("preferred_qualifications", row.get("pref_qual", ""))
+        about_src = row.get("about", "")
+        resp_src = row.get("responsibilities", "")
+        benefits_src = row.get("benefits", "")
+
+        def _fmt_val(v: object) -> str:
+            try:
+                if v is None or (isinstance(v, float) and pd.isna(v)):
+                    return _escape_html_text("N/A")
+                s = str(v).strip()
+                return _escape_html_text(s if s else "N/A")
+            except Exception:
+                return _escape_html_text("N/A")
+
+        basic_qual = _fmt_val(basic_src)
+        pref_qual = _fmt_val(pref_src)
+        about = _fmt_val(about_src)
+        responsibilities = _fmt_val(resp_src)
+        benefits = _fmt_val(benefits_src)
 
         # We will use a single row for both summary and details.
         html_rows.append(
@@ -138,10 +148,16 @@ def _generate_table_rows(df: pd.DataFrame) -> str:
                     <div class="details-container hidden">
                         <h4>Description</h4>
                         <p>{description}</p>
+                        <h4>About</h4>
+                        <p>{about}</p>
+                        <h4>Responsibilities</h4>
+                        <p>{responsibilities}</p>
                         <h4>Basic Qualifications</h4>
                         <p>{basic_qual}</p>
                         <h4>Preferred Qualifications</h4>
                         <p>{pref_qual}</p>
+                        <h4>Benefits</h4>
+                        <p>{benefits}</p>
                     </div>
                 </td>
                 <td>{_escape_html_text(row.get('company', 'N/A'))}</td>

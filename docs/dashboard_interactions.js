@@ -20,6 +20,54 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentSkills = []; // skills computed from currently visible rows
     let currentSkillsTotalJobs = 0; // denominator for percentages
 
+    // Skills canonicalization map loaded from docs/skills_map.json
+    let skillsMapExact = null; // as-is keys
+    let skillsMapNorm = null;  // lowercased/trimmed keys -> canonical
+    let aliasKeys = [];        // alias keys (normalized) for scanning
+    const shortAliasAllow = new Set(['r']); // allowlist of safe 1-char aliases
+
+    function buildWordBoundaryRegex(phrase) {
+        // Escape regex special chars in phrase
+        const esc = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        // Word boundary: allow letters, digits, underscore as word; treat others as non-word
+        // Also allow hyphen and slash as boundaries by using lookarounds around non-word
+        return new RegExp(`(^|[^\\w])(${esc})(?=$|[^\\w])`, 'i');
+    }
+
+    function findCanonicalsInText(text) {
+        if (!text || !skillsMapNorm || aliasKeys.length === 0) return [];
+        const t = String(text).toLowerCase();
+        const found = new Set();
+        for (const k of aliasKeys) {
+            // Skip ultra-short single-char aliases to avoid noise, except allowlisted
+            if (k.length < 2 && !shortAliasAllow.has(k)) continue;
+            const re = buildWordBoundaryRegex(k);
+            if (re.test(t)) {
+                const c = skillsMapNorm[k];
+                if (c) found.add(c);
+            }
+        }
+        return Array.from(found);
+    }
+
+    function loadSkillsMap() {
+        // Attempt to fetch docs/skills_map.json (same directory). Be resilient if missing.
+        return fetch('skills_map.json', { cache: 'no-store' })
+            .then(resp => (resp && resp.ok ? resp.json() : null))
+            .then(data => {
+                if (!data || typeof data !== 'object') return;
+                skillsMapExact = data;
+                skillsMapNorm = {};
+                for (const [k, v] of Object.entries(data)) {
+                    if (typeof k === 'string') {
+                        skillsMapNorm[k.toLowerCase().trim()] = v;
+                    }
+                }
+                aliasKeys = Object.keys(skillsMapNorm).sort((a, b) => b.length - a.length);
+            })
+            .catch(() => { /* ignore errors; proceed without canonicalization */ });
+    }
+
     function getSelectedCompanies() {
         if (!companyOptionsContainer) return [];
         return Array.from(companyOptionsContainer.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
@@ -95,15 +143,34 @@ document.addEventListener('DOMContentLoaded', () => {
             const basicList = splitHtmlBullets(basicHtml);
             const prefList = splitHtmlBullets(prefHtml);
 
-            basicList.forEach(name => {
-                const rec = map.get(name) || { basic_count: 0, preferred_count: 0 };
-                rec.basic_count += 1;
-                map.set(name, rec);
+            basicList.forEach(line => {
+                const hits = findCanonicalsInText(line);
+                if (hits.length === 0) {
+                    // fallback: keep raw line as-is to preserve visibility
+                    const rec = map.get(line) || { basic_count: 0, preferred_count: 0 };
+                    rec.basic_count += 1;
+                    map.set(line, rec);
+                } else {
+                    hits.forEach(cname => {
+                        const rec = map.get(cname) || { basic_count: 0, preferred_count: 0 };
+                        rec.basic_count += 1;
+                        map.set(cname, rec);
+                    });
+                }
             });
-            prefList.forEach(name => {
-                const rec = map.get(name) || { basic_count: 0, preferred_count: 0 };
-                rec.preferred_count += 1;
-                map.set(name, rec);
+            prefList.forEach(line => {
+                const hits = findCanonicalsInText(line);
+                if (hits.length === 0) {
+                    const rec = map.get(line) || { basic_count: 0, preferred_count: 0 };
+                    rec.preferred_count += 1;
+                    map.set(line, rec);
+                } else {
+                    hits.forEach(cname => {
+                        const rec = map.get(cname) || { basic_count: 0, preferred_count: 0 };
+                        rec.preferred_count += 1;
+                        map.set(cname, rec);
+                    });
+                }
             });
         });
 
@@ -612,13 +679,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Initialize company options with overall counts, then render
+    // Initialize company options with overall counts, then render once skills map (if any) is loaded
     const initialCounts = buildFacetCompanyCounts({ searchTerm: '', selectedCategory: '', selectedStatus: '' });
-    initializeCompanyMultiSelect(initialCounts);
-    // Initial sort on page load (newest jobs first)
-    sortTable();
-    // Initial render of skills and pagination
-    applyFilters({ resetPage: true });
+    loadSkillsMap().finally(() => {
+        initializeCompanyMultiSelect(initialCounts);
+        // Initial sort on page load (newest jobs first)
+        sortTable();
+        // Initial render of skills and pagination
+        applyFilters({ resetPage: true });
+    });
 
     // Event listeners
     searchInput.addEventListener('input', () => applyFilters({ resetPage: true }));

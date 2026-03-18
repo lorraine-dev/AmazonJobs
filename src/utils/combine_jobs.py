@@ -96,6 +96,15 @@ def combine_job_files(
                 df["url"] = df["job_url"]
             if "job_category" not in df.columns and "category" in df.columns:
                 df = df.rename(columns={"category": "job_category"})
+            # Align structured qualification columns
+            # Legacy -> new: basic_qual -> basic_qualifications; pref_qual -> preferred_qualifications
+            if "basic_qualifications" not in df.columns and "basic_qual" in df.columns:
+                df = df.rename(columns={"basic_qual": "basic_qualifications"})
+            if (
+                "preferred_qualifications" not in df.columns
+                and "pref_qual" in df.columns
+            ):
+                df = df.rename(columns={"pref_qual": "preferred_qualifications"})
 
             # Ensure 'active' exists and is boolean; default to True if missing/empty
             if "active" not in df.columns:
@@ -157,8 +166,13 @@ def combine_job_files(
         "posting_date",
         "url",
         "description",
-        "basic_qual",
-        "pref_qual",
+        # Structured description fields (parsed)
+        "about",
+        "responsibilities",
+        "basic_qualifications",
+        "preferred_qualifications",
+        "benefits",
+        # Other
         "skills",
         "active",
         "job_category",  # Renamed from 'category'

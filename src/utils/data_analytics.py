@@ -68,13 +68,17 @@ def get_skills_by_category(df: pd.DataFrame, job_category: str) -> list:
 
     # Iterate through the filtered DataFrame and populate the dictionary
     for _, row in filtered_df.iterrows():
+        # Prefer new parsed columns, fallback to legacy names if absent
+        basic_text = row.get("basic_qualifications", row.get("basic_qual", ""))
+        pref_text = row.get("preferred_qualifications", row.get("pref_qual", ""))
+
         # Process basic qualifications
-        basic_quals = _clean_and_split_quals(str(row.get("basic_qual", "")))
+        basic_quals = _clean_and_split_quals(str(basic_text))
         for qual in basic_quals:
             qualifications[qual]["basic_count"] += 1
 
         # Process preferred qualifications
-        pref_quals = _clean_and_split_quals(str(row.get("pref_qual", "")))
+        pref_quals = _clean_and_split_quals(str(pref_text))
         for qual in pref_quals:
             qualifications[qual]["preferred_count"] += 1
 
