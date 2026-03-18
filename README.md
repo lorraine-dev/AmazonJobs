@@ -12,6 +12,8 @@ This project:
 - **Generates the dashboard** from the combined CSV
 - **Deploys to GitHub Pages** (auto-updating dashboard)
 
+For day-to-day repo state and navigation, start with `docs/START_HERE.md`.
+
 ---
 
 ## 📊 Dashboard
@@ -42,12 +44,14 @@ The dashboard shows:
 ├── config/
 │   ├── scraper_config.yaml                  # Source configs and limits
 │   ├── category_mapping.yaml                # Mapping rules for categories
+│   ├── skill_aliases.yaml                   # Normalization/aliases for skill names
 │   └── theirstack_titles.json               # Title normalization hints for TheirStack
 ├── docs/
 │   ├── index.html                           # Dashboard (auto-generated)
 │   ├── style.css                            # Main dashboard styles
 │   ├── skills.css                           # Skills visualization styles
 │   ├── dashboard_interactions.js            # Client-side interactions
+│   ├── skills_taxonomy.json                 # Skills taxonomy used by extractor/visuals
 │   └── reference/                           # API/reference assets
 ├── src/
 │   ├── scraper/
@@ -74,15 +78,22 @@ The dashboard shows:
 │   │   ├── text_lang.py                     # Language detection helpers
 │   │   └── theirstack_state.py              # TheirStack incremental state
 │   └── scripts/
-│       └── run_scraper.py                   # Unified runner (CLI)
+│       ├── run_scraper.py                   # Unified runner (CLI)
+│       └── extract_skills.py                # Skill extraction/aggregation helper
 ├── data/
 │   ├── raw/                                 # Raw per-source CSVs (artifacts)
 │   ├── processed/
 │   │   └── combined_jobs.csv                # Unified CSV for dashboard
 │   └── backups/                             # TheirStack request/response backups
-├── README.md
 ├── requirements.txt
+├── requirements-dev.txt
+├── constraints.txt
+├── constraints-selenium.txt
+├── renovate.json
+├── mypy.ini
+├── .flake8
 ├── setup.py
+├── README.md
 └── .gitignore
 ```
 
@@ -137,6 +148,85 @@ The dashboard shows:
    python src/utils/data_processor.py
    ```
 
+### Skill Extraction and Analysis
+
+- Extract and canonicalize skills from the combined CSV, including inline alias scanning and taxonomy-based categories:
+
+  ```bash
+  # Default outputs to data/processed/
+  python -m src.scripts.extract_skills --output-dir data/processed
+  ```
+
+  Outputs written to `data/processed/`:
+  - `skills_raw_freq.csv` — Raw post-filter lines and their counts.
+  - `skills_canonical_freq.csv` — Canonical skill counts via inline alias scanning.
+  - `skills_pairs_sample.csv` — Sample of `(job_id, section, raw_skill, canonical_skill)` rows.
+  - `skills_unmatched_lines.csv` — Lines skipped by the alias scanner (for taxonomy/alias improvements).
+  - `skills_by_category.csv` — Aggregated canonical counts by taxonomy category.
+  - `skills_with_category.csv` — Lookup of each canonical skill with its category and count.
+  - `skills_suggestions.csv` — Proposed new skills/aliases inferred from unmatched lines and peer-of-matched tokens.
+
+  Notes:
+  - Canonical labels and aliases come from `config/skill_aliases.yaml` (overrides) merged with `docs/skills_taxonomy.json`.
+  - Stop phrases in `skill_aliases.yaml` are filtered before scanning.
+
+#### Skill Suggestions Triage Workflow
+
+Use `skills_suggestions.csv` to iteratively improve coverage:
+
+  1. Open `data/processed/skills_suggestions.csv` and scan top candidates by `frequency`.
+  2. For accepted items:
+    - Add or merge under the correct canonical in `docs/skills_taxonomy.json` (with `aliases`).
+    - Optionally add to `config/skill_aliases.yaml` under `canonical_map` to override/expand aliases.
+  3. Degrees and certifications are kept (e.g., Bachelor's, Master's, MBA, PhD) and categorized under `Education & Credentials`.
+  4. Add noisy boilerplate phrases to `stop_phrases` in `config/skill_aliases.yaml` to reduce future noise.
+  5. Re-run the extractor to validate updated counts and suggestions:
+    ```bash
+    python -m src.scripts.extract_skills --output-dir data/processed
+    ```
+
+#### Fuzzy merge candidates (strict)
+
+Generate conservative fuzzy merge candidates anchored to known aliases and restricted to known canonicals:
+
+```bash
+python -m src.scripts.generate_fuzzy_merges \
+  --strict-skill-like \
+  --block-mode first_sig \
+  --threshold 85 \
+  --prune-jd-stopwords \
+  --skip-both-long \
+  --topk-per-variant 1 \
+  --anchor-to-alias \
+  --restrict-known-canonicals \
+  --input-raw-csv data/processed/skills_raw_freq.csv \
+  --aliases config/skill_aliases.yaml \
+  --output data/processed/skills_fuzzy_candidates.csv
+```
+
+Notes:
+- `--block-mode first_sig` avoids splitting related phrases into coarse length buckets.
+- `--anchor-to-alias` boosts pairs sharing exactly one detected alias.
+- `--restrict-known-canonicals` remaps candidate canonicals to a known alias when exactly one known alias is present in the variant.
+
+#### Generate skills map JSON
+
+Consolidate aliases and high-confidence fuzzy merges into a single mapping consumed by the dashboard:
+
+```bash
+python -m src.scripts.generate_skills_map \
+  --aliases config/skill_aliases.yaml \
+  --fuzzy-candidates data/processed/skills_fuzzy_candidates.csv \
+  --min-score 100 \
+  --output-config-json config/skills_map.json \
+  --output-docs-json docs/skills_map.json
+```
+
+What it does:
+- Builds `raw_skill` → `canonical_label` mapping from YAML aliases (authoritative) and fuzzy candidates with score ≥ `--min-score`.
+- Writes the map to `config/skills_map.json` and copies to `docs/skills_map.json`.
+- The dashboard (`docs/dashboard_interactions.js`) loads `docs/skills_map.json` and aggregates variants under their canonical labels.
+
 ---
 
 ## ⚙️ Configuration
@@ -166,7 +256,7 @@ All settings are optional; sensible defaults are used if keys are absent.
 
 ## 🤖 Automation
 
-- **GitHub Actions** runs 3x daily at 08:00, 14:00, and 18:00 UTC (see `.github/workflows/scraper.yml`).
+- **GitHub Actions** runs every 5 days at 08:00 UTC (see `.github/workflows/scraper.yml`).
 - You can also run it manually and choose the Amazon engine via the `amazon_engine` input (defaults to `api`).
 - Secrets: add `THEIR_STACK_API_KEY` under Settings → Secrets and variables → Actions.
 - Artifacts persisted between runs:

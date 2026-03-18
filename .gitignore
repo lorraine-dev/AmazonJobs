@@ -132,13 +132,17 @@ dmypy.json
 
 # Development tools
 .pre-commit-config.yaml
-requirements-dev.txt
+# requirements-dev.txt
 prompt.txt
 
 # Data files (keep local only)
 /data/
 /logs/
 /backups/
+
+# Local caches and experimental logs
+.hf_cache/
+semantic_alias_runs_log.md
 
 # Documentation files (keep local only)
 INTERNAL_NOTES.md
