@@ -19,3 +19,6 @@ certifi==2025.8.3
 
 # Selenium
 selenium==4.34.2
+
+# Fuzzy matching for skills merge (T0.4)
+rapidfuzz==3.3.0

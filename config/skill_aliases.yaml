@@ -1,0 +1,213 @@
+# Canonical skill labels and their common aliases/synonyms.
+# Structure:
+# canonical_map:
+#   <canonical_label>:
+#     - <alias1>
+#     - <alias2>
+#     ...
+# stop_phrases:  # optional phrases to ignore if encountered as standalone lines
+#   - "equal opportunity"
+#   - "..."
+
+canonical_map:
+  amazon web services:
+    - aws
+    - amazon web service
+    - amazon aws
+    - amazon cloud
+  machine learning:
+    - ml
+  natural language processing:
+    - nlp
+  natural language understanding:
+    - nlu
+  computer vision:
+    - cv
+  data science:
+    - data scientist
+  data engineering:
+    - data engineer
+  big data:
+    - bigdata
+  python:
+    - python3
+    - python 3
+  javascript:
+    - js
+  typescript:
+    - ts
+  java:
+    - jvm
+  c++:
+    - cpp
+    - c plus plus
+  c#:
+    - c sharp
+  sql:
+    - structured query language
+  nosql:
+    - no sql
+    - no-sql
+  postgresql:
+    - postgres
+  mysql:
+    - my sql
+  sql server:
+    - mssql
+    - microsoft sql server
+  git:
+    - version control
+  github: []
+  gitlab: []
+  bitbucket: []
+  docker:
+    - containers
+    - containerization
+  kubernetes:
+    - k8s
+  apache kafka:
+    - kafka
+  apache spark:
+    - spark
+  hadoop:
+    - apache hadoop
+  airflow:
+    - apache airflow
+  terraform:
+    - iaac
+    - infrastructure as code
+  ansible: []
+  linux:
+    - gnu/linux
+  bash:
+    - shell scripting
+    - bash scripting
+    - sh
+  rest:
+    - rest api
+    - restful
+  graphql:
+    - graph ql
+  aws s3:
+    - s3
+  aws lambda:
+    - lambda
+  aws ec2:
+    - ec2
+  amazon dynamodb:
+    - dynamodb
+  azure:
+    - microsoft azure
+  google cloud platform:
+    - gcp
+    - google cloud
+  snowflake: []
+  databricks: []
+  tableau: []
+  power bi:
+    - powerbi
+  excel:
+    - microsoft excel
+  pandas: []
+  numpy: []
+  scikit-learn:
+    - sklearn
+  pytorch: []
+  tensorflow: []
+  selenium: []
+  beautiful soup:
+    - bs4
+  microservices:
+    - micro services
+  monorepo:
+    - mono repo
+  ci/cd:
+    - cicd
+    - continuous integration
+    - continuous delivery
+  agile:
+    - scrum
+
+  microstrategy:
+    - micro strategy
+    - mstr
+  quicksight:
+    - aws quicksight
+    - quick sight
+  redshift:
+    - amazon redshift
+    - aws redshift
+  amazon emr:
+    - emr
+    - aws emr
+  operations research:
+    - or
+  data structures and algorithms:
+    - dsa
+    - algorithms
+    - data structures
+  etl pipelines:
+    - etl
+    - extract transform load
+  statistical analysis:
+    - chi-squared
+    - t-test
+    - correlation analysis
+    - statistical analysis of results
+    - hypothesis testing
+    - regression analysis
+
+  data cleaning:
+    - data cleansing
+    - data cleansing/cleaning
+    - cleaning
+    - clean
+    - cleaning data
+    - cleanse data
+    - data wrangling
+
+  r:
+    - r programming
+    - r language
+    - r-statistics
+    - rstats
+
+  bachelor's degree:
+    - bachelors degree
+    - bachelor’s degree
+    - bachelor's
+    - bachelors
+    - undergraduate degree
+    - bs
+    - b.s.
+
+  apache hive:
+    - hive
+  a/b testing:
+    - ab testing
+    - a-b testing
+    - a b testing
+    - a/b test
+  generative ai:
+    - genai
+  graph database:
+    - graph db
+    - graph databases
+
+stop_phrases:
+  - "equal opportunity"
+  - "work authorization"
+  - "visa"
+  - "privacy notice"
+  - "accommodations"
+  - "inclusive culture"
+  - "recruiting partner"
+  - "country/region you’re applying"
+  - "know more about how we collect"
+  - "personal data of our candidates"
+  - "for more information"
+  - "Speak, write, and read fluently in English"
+  - "Ability to communicate and influence at an executive level"
+  - "C-level"
+  - "Experience in the data/BI space"
+  - "Program management experience"

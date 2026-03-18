@@ -1,0 +1,150 @@
+{
+  "Programming Languages": [
+    { "name": "Python", "aliases": ["Py", "py"] },
+    { "name": "R", "aliases": ["R language"] },
+    { "name": "Java", "aliases": [] },
+    { "name": "C++", "aliases": ["C plus plus"] },
+    { "name": "C#", "aliases": ["C sharp"] },
+    { "name": "SQL", "aliases": ["MySQL", "PostgreSQL", "T-SQL", "sql queries"] },
+    { "name": "Scala", "aliases": [] },
+    { "name": "MATLAB", "aliases": ["Matlab"] },
+    { "name": "JavaScript", "aliases": ["JS", "TypeScript"] }
+  ],
+  "Machine Learning & AI": [
+    { "name": "TensorFlow", "aliases": [] },
+    { "name": "PyTorch", "aliases": [] },
+    { "name": "Scikit-learn", "aliases": ["sklearn"] },
+    { "name": "Keras", "aliases": [] },
+    { "name": "XGBoost", "aliases": [] },
+    { "name": "LightGBM", "aliases": ["Light Gradient Boosting Machine"] },
+    { "name": "Hugging Face Transformers", "aliases": ["Transformers", "HF Transformers"] },
+    { "name": "spaCy", "aliases": [] },
+    { "name": "NLTK", "aliases": ["Natural Language Toolkit"] },
+    { "name": "BERT", "aliases": ["Bidirectional Encoder Representations from Transformers"] },
+    { "name": "GPT", "aliases": ["OpenAI GPT", "ChatGPT"] },
+    { "name": "Machine Learning", "aliases": ["ML", "ml models", "machine-learning"] },
+    { "name": "Deep Learning", "aliases": [] },
+    { "name": "Data Mining", "aliases": [] },
+    { "name": "Information Retrieval", "aliases": [] },
+    { "name": "NLP", "aliases": ["Natural Language Processing", "nlp techniques"] },
+    { "name": "LLM", "aliases": ["Large Language Models", "chatgpt"] },
+    { "name": "Generative AI", "aliases": ["GenAI"] }
+  ],
+  "Data Visualization": [
+    { "name": "Tableau", "aliases": [] },
+    { "name": "Power BI", "aliases": ["PowerBI", "Microsoft Power BI", "Power BI"] },
+    { "name": "MicroStrategy", "aliases": ["MicroStrategy", "Micro Strategy", "MSTR"] },
+    { "name": "Looker", "aliases": ["Google Looker", "Looker Studio"] },
+    { "name": "Qlik", "aliases": ["QlikView", "Qlik Sense"] },
+    { "name": "Matplotlib", "aliases": [] },
+    { "name": "Seaborn", "aliases": [] },
+    { "name": "Plotly", "aliases": ["Dash"] },
+    { "name": "D3.js", "aliases": ["D3"] },
+    { "name": "Quicksight", "aliases": ["AWS QuickSight"] }
+  ],
+  "Big Data & Cloud": [
+    { "name": "Hadoop", "aliases": [] },
+    { "name": "Spark", "aliases": ["Apache Spark"] },
+    { "name": "Kafka", "aliases": ["Apache Kafka"] },
+    { "name": "ElasticSearch", "aliases": ["ELK Stack"] },
+    { "name": "AWS", "aliases": ["Amazon Web Services"] },
+    { "name": "Azure", "aliases": ["Microsoft Azure"] },
+    { "name": "Google Cloud Platform", "aliases": ["GCP"] },
+    { "name": "Snowflake", "aliases": [] },
+    { "name": "Databricks", "aliases": [] },
+    { "name": "Amazon EMR", "aliases": ["EMR", "AWS EMR"] },
+    { "name": "Redshift", "aliases": ["Amazon Redshift", "AWS Redshift"] },
+    { "name": "Apache Hive", "aliases": ["Hive"] }
+  ],
+  "Databases & Data Management": [
+    { "name": "PostgreSQL", "aliases": ["Postgres"] },
+    { "name": "MySQL", "aliases": [] },
+    { "name": "MongoDB", "aliases": [] },
+    { "name": "Oracle Database", "aliases": ["Oracle DB", "Oracle"] },
+    { "name": "SQLite", "aliases": [] },
+    { "name": "Cassandra", "aliases": ["Apache Cassandra"] },
+    { "name": "Neo4j", "aliases": ["Neo4j Graph Database"] },
+    { "name": "Graph Database", "aliases": ["Graph DB", "Graph Databases"] },
+    { "name": "NoSQL", "aliases": ["MongoDB", "Cassandra", "DynamoDB"] }
+  ],
+  "Software Development & Tools": [
+    { "name": "Git", "aliases": ["GitHub", "GitLab", "Bitbucket"] },
+    { "name": "Docker", "aliases": [] },
+    { "name": "Kubernetes", "aliases": ["K8s"] },
+    { "name": "CI/CD", "aliases": ["Continuous Integration", "Continuous Deployment"] },
+    { "name": "Jenkins", "aliases": [] },
+    { "name": "Maven", "aliases": [] },
+    { "name": "Gradle", "aliases": [] }
+  ],
+  "Data Processing & ETL": [
+    { "name": "Airflow", "aliases": ["Apache Airflow"] },
+    { "name": "Luigi", "aliases": [] },
+    { "name": "NiFi", "aliases": ["Apache NiFi"] },
+    { "name": "Informatica", "aliases": [] },
+    { "name": "Talend", "aliases": [] },
+    { "name": "SSIS", "aliases": ["SQL Server Integration Services"] },
+    { "name": "ETL Pipelines", "aliases": ["Extract Transform Load"] },
+    { "name": "Data Warehousing", "aliases": ["DW"] },
+    { "name": "BigQuery", "aliases": ["Google BigQuery"] },
+    { "name": "Data Cleaning", "aliases": ["multi-TB data sets", "data preprocessing", "data wrangling", "clean datasets"] }
+  ],
+  "Business & Analysis Tools": [
+    { "name": "Excel", "aliases": ["Microsoft Excel"] },
+    { "name": "SAS", "aliases": ["SAS Analytics"] },
+    { "name": "Stata", "aliases": [] },
+    { "name": "SPSS", "aliases": ["IBM SPSS"] },
+    { "name": "Alteryx", "aliases": [] }
+  ],
+  "Research & Open Science": [
+    { "name": "LaTeX", "aliases": [] },
+    { "name": "Jupyter", "aliases": ["Jupyter Notebooks"] },
+    { "name": "R Markdown", "aliases": [] },
+    { "name": "OSF", "aliases": ["Open Science Framework"] },
+    { "name": "repo2docker", "aliases": [] },
+    { "name": "MyBinder", "aliases": [] },
+    { "name": "FAIR Principles", "aliases": ["FAIR Data"] }
+  ],
+  "Languages": [
+    { "name": "German", "aliases": ["Deutsch", "German language skills"] }
+  ],
+  "Software Development & Architecture": [
+    { "name": "Software Development", "aliases": ["professional software development", "non-internship development"] },
+    { "name": "System Architecture", "aliases": ["designing or architecting systems", "infrastructure architecture", "database architecture"] },
+    { "name": "Design Patterns", "aliases": [] },
+    { "name": "Reliability & Scaling", "aliases": ["highly available systems", "scalable systems"] }
+  ],
+  "Statistical & Analytical Methods": [
+    { "name": "Design of Experiments", "aliases": ["DOE"] },
+    { "name": "Statistical Analysis", "aliases": ["hypothesis testing", "regression analysis", "interpreting data"] },
+    { "name": "Numerical Optimization", "aliases": ["optimization algorithms"] },
+    { "name": "Quantitative Research", "aliases": [] },
+    { "name": "Data Modeling", "aliases": ["dimensional modeling"] },
+    { "name": "Data Structures and Algorithms", "aliases": ["DSA"] },
+    { "name": "Operations Research", "aliases": ["OR"] },
+    { "name": "A/B Testing", "aliases": ["AB testing", "A-B testing", "A B testing", "A/B test"] }
+  ],
+  "Cloud & Platforms": [
+    { "name": "AWS", "aliases": ["Amazon Web Services"] },
+    { "name": "AWS S3", "aliases": ["Amazon S3"] },
+    { "name": "AWS DynamoDB", "aliases": [] },
+    { "name": "AWS EC2", "aliases": [] },
+
+    { "name": "Azure", "aliases": ["Microsoft Azure"] },
+    { "name": "GCP", "aliases": ["Google Cloud Platform"] }
+  ],
+  "Professional & Domain Skills": [
+    { "name": "Stakeholder Communication", "aliases": ["working with business stakeholders", "translate between data and business needs", "superior communication", "verbal and written communication", "experience working with end users", "experience working with developer communities", "business communication", "communicate with stakeholders"] },
+    { "name": "Product Management", "aliases": ["product management experience", "managing software-focused products", "experience with software engineering teams"] },
+    { "name": "Product Strategy", "aliases": ["roadmap strategy", "developing strategies that influence leadership decisions", "shaping business strategy with data"] },
+    { "name": "Project Management", "aliases": ["PM", "project planning", "agile methodology", "SCRUM"] },
+    { "name": "Leadership & Mentorship", "aliases": ["team leadership", "mentorship experience", "mentoring colleagues"] },
+    { "name": "Domain Knowledge", "aliases": ["industry-specific knowledge", "financial domain", "healthcare domain", "policy research", "academic research"] },
+    { "name": "Data Governance & Compliance", "aliases": ["data privacy", "data security", "compliance with GDPR or HIPAA"] }
+  ],
+  "Education & Credentials": [
+    { "name": "Bachelor's degree", "aliases": ["Bachelor's", "BS", "BA", "undergraduate degree"] },
+    { "name": "Master's degree", "aliases": ["Master's", "MS", "MSc", "graduate degree"] },
+    { "name": "MBA", "aliases": ["Master of Business Administration"] },
+    { "name": "PhD", "aliases": ["Doctorate", "Doctoral degree"] }
+  ]
+}
