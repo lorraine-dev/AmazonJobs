@@ -33,10 +33,10 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
     - name: Set up Python
-      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
       with:
         python-version: '3.11'
         cache: 'pip'
@@ -67,7 +67,7 @@ jobs:
         fi
 
     - name: Download previous data
-      uses: dawidd6/action-download-artifact@8a338493df3d275e4a7a63bcff3b8fe97e51a927 # v19
+      uses: dawidd6/action-download-artifact@d63b86af1b34672e53c440b1b83979861906bad7 # v24
       with:
         name: job-data
         path: data/raw/
@@ -77,7 +77,7 @@ jobs:
       continue-on-error: true
 
     - name: Download previous state
-      uses: dawidd6/action-download-artifact@8a338493df3d275e4a7a63bcff3b8fe97e51a927 # v19
+      uses: dawidd6/action-download-artifact@d63b86af1b34672e53c440b1b83979861906bad7 # v24
       with:
         name: job-state
         path: .
@@ -197,16 +197,16 @@ jobs:
         python -m src.utils.data_processor
 
     - name: Setup Pages
-      uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+      uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
 
     - name: Upload artifact
-      uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
+      uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
       with:
         path: ./docs
 
     - name: Deploy to GitHub Pages
       id: deployment
-      uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
+      uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5
 
     - name: Notify on success
       if: success()
